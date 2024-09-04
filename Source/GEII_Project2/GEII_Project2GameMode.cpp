@@ -13,6 +13,9 @@ AGEII_Project2GameMode::AGEII_Project2GameMode()
 
 }
 
+// New Code
+
+// Network Handling
 void AGEII_Project2GameMode::PostLogin(APlayerController* NewPlayer)
 {
 	Super::PostLogin(NewPlayer);
@@ -41,16 +44,39 @@ void AGEII_Project2GameMode::Logout(AController* Exiting)
 	UE_LOG(LogTemp, Log, TEXT("Player has logged out: %s"), *Exiting->GetName());
 }
 
+// Spawn Handling
+
 FTransform AGEII_Project2GameMode::FindRandomPlayerStart()
 {
-	TArray<AActor*> PlayerStarts;
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), APlayerStart::StaticClass(), PlayerStarts);
+	// Get all player starts in the world if the array is empty so that it only does this once.
+	if (PlayerStarts.IsEmpty())
+	{
+		UGameplayStatics::GetAllActorsOfClass(GetWorld(), APlayerStart::StaticClass(), PlayerStarts);
+	}
 
+	// Verify if there are player starts in the world before getting a random one
 	if (PlayerStarts.Num() > 0)
 	{
 		int32 RandomIndex = FMath::RandRange(0, PlayerStarts.Num() - 1);
 
 		AActor* SelectedPlayerStart = PlayerStarts[RandomIndex];
+
+		if (!AllSelectedPlayerStarts.Contains(SelectedPlayerStart))
+		{
+
+			AllSelectedPlayerStarts.AddUnique(SelectedPlayerStart);
+
+			PlayerStarts.Remove(SelectedPlayerStart);
+
+			if (PlayerStarts.IsEmpty())
+			{
+				AllSelectedPlayerStarts.Empty();
+			}
+		}
+
+		// Debug to check player starts availability
+		UE_LOG(LogTemp, Warning, TEXT("Player Starts available: %d"), PlayerStarts.Num());
+		UE_LOG(LogTemp, Warning, TEXT("Player Starts Unavailable: %d"), AllSelectedPlayerStarts.Num());
 
 		return SelectedPlayerStart->GetActorTransform();
 	}
@@ -58,8 +84,10 @@ FTransform AGEII_Project2GameMode::FindRandomPlayerStart()
 	return FTransform();
 }
 
+
 void AGEII_Project2GameMode::SpawnPlayer(APlayerController* PlayerController)
 {
+	// Check if player controller is valid
 	if (!PlayerController)
 	{
 		return;
@@ -67,11 +95,13 @@ void AGEII_Project2GameMode::SpawnPlayer(APlayerController* PlayerController)
 
 	APawn* ControlledPawn = PlayerController->GetPawn();
 
+	//Destroy controlled pawn if it's valid, we want to spawn a new one and not use the previous Pawn
 	if (ControlledPawn)
 	{
 		ControlledPawn->Destroy();
 	}
 
+	// Get a random player start
 	FTransform PlayerStartTransform = FindRandomPlayerStart();
 
 	FActorSpawnParameters SpawnParameters;
@@ -79,8 +109,11 @@ void AGEII_Project2GameMode::SpawnPlayer(APlayerController* PlayerController)
 
 	AGEII_Project2Character* SpawnedCharacter = GetWorld()->SpawnActor<AGEII_Project2Character>(PlayerCharacterClass, PlayerStartTransform, SpawnParameters);
 
+	// Make the Player Controlled possess the new Spawned Character and set its color
 	if (SpawnedCharacter)
 	{
+		// Set the player controllers' direction
+		PlayerController->ClientSetRotation(PlayerStartTransform.Rotator());
 		PlayerController->Possess(SpawnedCharacter);
 
 		SetPlayerColor(PlayerController, SpawnedCharacter);
@@ -91,6 +124,7 @@ void AGEII_Project2GameMode::SetPlayerColor(APlayerController* PlayerController,
 {
 	int32 PlayerIndex = AllPlayerControllers.Find(PlayerController);
 
+	// Change the character's color for its index's corresponding color
 	if (PlayerIndex != INDEX_NONE)
 	{
 		PlayerCharacter->ChangeColor(PlayerColorOptions[PlayerIndex]);

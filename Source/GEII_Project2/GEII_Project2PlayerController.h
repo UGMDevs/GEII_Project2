@@ -30,6 +30,7 @@ protected:
 	// End Actor interface
 
 protected: 
+	/** Server function for spawning the character */
 	UFUNCTION(BlueprintCallable, Server, Reliable)
 	void SR_SpawnPlayer();
 };

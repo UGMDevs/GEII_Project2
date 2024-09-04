@@ -19,6 +19,7 @@ void AGEII_Project2PlayerController::BeginPlay()
 		UE_LOG(LogTemp, Warning, TEXT("BeginPlay"));
 	}
 
+	// Ask the server to spawn a character for this controller
 	if (IsLocalPlayerController())
 	{
 		SR_SpawnPlayer();

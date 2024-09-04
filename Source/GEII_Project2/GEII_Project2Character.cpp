@@ -119,13 +119,13 @@ bool AGEII_Project2Character::GetHasRifle()
 	return bHasRifle;
 }
 
-//new Code
+// New Code
 
 void AGEII_Project2Character::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	// Replicate current health.
+	// Replicate Character Color
 	DOREPLIFETIME(AGEII_Project2Character, CharacterColor);
 }
 
@@ -133,11 +133,13 @@ void AGEII_Project2Character::ChangeColor(FLinearColor NewColor)
 {
 	if (GetLocalRole() == ROLE_Authority)
 	{
+		// Change color if it's server
 		CharacterColor = NewColor;
 		OnRep_CharacterColor();
 	}
 	else
 	{
+		// Ask the server to change the color
 		SR_ChangeColor(NewColor);
 	}
 }
@@ -149,5 +151,6 @@ void AGEII_Project2Character::OnRep_CharacterColor()
 
 void AGEII_Project2Character::SR_ChangeColor_Implementation(FLinearColor NewColor)
 {
+	// Change Color with authority
 	ChangeColor(NewColor);
 }

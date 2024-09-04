@@ -90,16 +90,22 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Color")
 	void ChangeColor(FLinearColor NewColor);
 
+	// New Code
+
 protected:
+	/** Character's current color */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_CharacterColor, Category = "Color")
 	FLinearColor CharacterColor;
 
+	/** RepNotify for changes made to the character's color*/
 	UFUNCTION()
 	void OnRep_CharacterColor();
 
+	/** Called when the character's color change */
 	UFUNCTION(BlueprintImplementableEvent, Category = "Color")
 	void OnCharacterColorChange(FLinearColor NewColor);
 
+	/** Server function for changing color */
 	UFUNCTION(Server, Reliable)
 	void SR_ChangeColor(FLinearColor NewColor);
 
