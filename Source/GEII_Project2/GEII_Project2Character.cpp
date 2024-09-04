@@ -10,6 +10,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 #include "Engine/LocalPlayer.h"
+#include "Net/UnrealNetwork.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -39,6 +40,7 @@ AGEII_Project2Character::AGEII_Project2Character()
 	//Mesh1P->SetRelativeRotation(FRotator(0.9f, -19.19f, 5.2f));
 	Mesh1P->SetRelativeLocation(FVector(-30.f, 0.f, -150.f));
 
+	bReplicates = true;
 }
 
 void AGEII_Project2Character::BeginPlay()
@@ -115,4 +117,37 @@ void AGEII_Project2Character::SetHasRifle(bool bNewHasRifle)
 bool AGEII_Project2Character::GetHasRifle()
 {
 	return bHasRifle;
+}
+
+//new Code
+
+void AGEII_Project2Character::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	// Replicate current health.
+	DOREPLIFETIME(AGEII_Project2Character, CharacterColor);
+}
+
+void AGEII_Project2Character::ChangeColor(FLinearColor NewColor)
+{
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		CharacterColor = NewColor;
+		OnRep_CharacterColor();
+	}
+	else
+	{
+		SR_ChangeColor(NewColor);
+	}
+}
+
+void AGEII_Project2Character::OnRep_CharacterColor()
+{
+	OnCharacterColorChange(CharacterColor);
+}
+
+void AGEII_Project2Character::SR_ChangeColor_Implementation(FLinearColor NewColor)
+{
+	ChangeColor(NewColor);
 }

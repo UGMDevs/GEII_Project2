@@ -83,5 +83,24 @@ public:
 	/** Returns FirstPersonCameraComponent subobject **/
 	UCameraComponent* GetFirstPersonCameraComponent() const { return FirstPersonCameraComponent; }
 
-};
+public:
+	/** Property replication*/
+	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
+	UFUNCTION(BlueprintCallable, Category = "Color")
+	void ChangeColor(FLinearColor NewColor);
+
+protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_CharacterColor, Category = "Color")
+	FLinearColor CharacterColor;
+
+	UFUNCTION()
+	void OnRep_CharacterColor();
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Color")
+	void OnCharacterColorChange(FLinearColor NewColor);
+
+	UFUNCTION(Server, Reliable)
+	void SR_ChangeColor(FLinearColor NewColor);
+
+};

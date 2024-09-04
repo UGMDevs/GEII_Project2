@@ -28,4 +28,8 @@ protected:
 	virtual void BeginPlay() override;
 
 	// End Actor interface
+
+protected: 
+	UFUNCTION(BlueprintCallable, Server, Reliable)
+	void SR_SpawnPlayer();
 };
