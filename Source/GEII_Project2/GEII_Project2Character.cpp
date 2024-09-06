@@ -11,6 +11,9 @@
 #include "InputActionValue.h"
 #include "Engine/LocalPlayer.h"
 #include "Net/UnrealNetwork.h"
+#include "TP_WeaponComponent.h"
+#include "Engine/World.h"
+#include "UObject/UObjectGlobals.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -140,7 +143,7 @@ void AGEII_Project2Character::ChangeColor(FLinearColor NewColor)
 	else
 	{
 		// Ask the server to change the color
-		SR_ChangeColor(NewColor);
+		Server_ChangeColor(NewColor);
 	}
 }
 
@@ -149,7 +152,7 @@ void AGEII_Project2Character::OnRep_CharacterColor()
 	OnCharacterColorChange(CharacterColor);
 }
 
-void AGEII_Project2Character::SR_ChangeColor_Implementation(FLinearColor NewColor)
+void AGEII_Project2Character::Server_ChangeColor_Implementation(FLinearColor NewColor)
 {
 	// Change Color with authority
 	ChangeColor(NewColor);

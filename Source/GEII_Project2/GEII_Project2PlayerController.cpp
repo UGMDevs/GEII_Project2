@@ -22,12 +22,12 @@ void AGEII_Project2PlayerController::BeginPlay()
 	// Ask the server to spawn a character for this controller
 	if (IsLocalPlayerController())
 	{
-		SR_SpawnPlayer();
+		Server_SpawnPlayer();
 	}
 
 }
 
-void AGEII_Project2PlayerController::SR_SpawnPlayer_Implementation()
+void AGEII_Project2PlayerController::Server_SpawnPlayer_Implementation()
 {
 	AGEII_Project2GameMode* GameMode = Cast<AGEII_Project2GameMode>(GetWorld()->GetAuthGameMode());
 
