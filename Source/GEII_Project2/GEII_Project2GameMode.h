@@ -23,7 +23,7 @@ public:
 // New Code
 
 protected:
-	/** All player controllers conrrently connected*/
+	/** All player controllers currently connected*/
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TArray<APlayerController*> AllPlayerControllers;
 

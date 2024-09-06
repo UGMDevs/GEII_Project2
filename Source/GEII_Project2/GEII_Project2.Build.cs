@@ -8,6 +8,17 @@ public class GEII_Project2 : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput" });
+		PublicDependencyModuleNames.AddRange(new string[] {
+			"Core",
+			"CoreUObject",
+			"Engine", "InputCore",
+			"EnhancedInput",
+		});
+
+		PrivateDependencyModuleNames.AddRange(new string[]{
+					"OnlineSubsystem",
+					"OnlineSubsystemUtils",
+					"OnlineSubsystemSteam"
+		});
 	}
 }
