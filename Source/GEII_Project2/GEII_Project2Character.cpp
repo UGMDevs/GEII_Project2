@@ -14,6 +14,7 @@
 #include "TP_WeaponComponent.h"
 #include "Engine/World.h"
 #include "UObject/UObjectGlobals.h"
+#include "Engine/Engine.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -129,7 +130,7 @@ void AGEII_Project2Character::GetLifetimeReplicatedProps(TArray<FLifetimePropert
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	// Replicate Character Color
-	DOREPLIFETIME(AGEII_Project2Character, CharacterColor);
+	DOREPLIFETIME(AGEII_Project2Character, CharacterColor)
 }
 
 void AGEII_Project2Character::ChangeColor(FLinearColor NewColor)

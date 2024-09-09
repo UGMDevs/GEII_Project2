@@ -109,4 +109,5 @@ protected:
 	/** Server function for changing color */
 	UFUNCTION(Server, Reliable)
 	void Server_ChangeColor(FLinearColor NewColor);
+
 };

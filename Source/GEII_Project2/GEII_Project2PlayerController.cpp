@@ -5,6 +5,7 @@
 #include "GameFramework/Gamemode.h"
 #include "GEII_Project2GameMode.h"
 #include "EnhancedInputSubsystems.h"
+#include "GEII_Project2Character.h"
 
 void AGEII_Project2PlayerController::BeginPlay()
 {
@@ -29,10 +30,13 @@ void AGEII_Project2PlayerController::BeginPlay()
 
 void AGEII_Project2PlayerController::Server_SpawnPlayer_Implementation()
 {
-	AGEII_Project2GameMode* GameMode = Cast<AGEII_Project2GameMode>(GetWorld()->GetAuthGameMode());
-
-	if (GameMode)
+	if (HasAuthority())
 	{
-		GameMode->SpawnPlayer(this);
+		AGEII_Project2GameMode* GameMode = Cast<AGEII_Project2GameMode>(GetWorld()->GetAuthGameMode());
+
+		if (GameMode)
+		{
+			GameMode->SpawnPlayer(this);
+		}
 	}
 }

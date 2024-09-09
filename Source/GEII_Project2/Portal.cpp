@@ -19,6 +19,10 @@
 #include "Engine/World.h"
 #include "DrawDebugHelpers.h"
 #include "CollisionQueryParams.h"
+#include "Engine/Engine.h"
+#include "GEII_Project2Projectile.h"
+#include "GameFramework/ProjectileMovementComponent.h"
+#include "Components/SphereComponent.h"
 
 
 // Define custom trace channels
@@ -27,6 +31,8 @@
 // Sets default values
 APortal::APortal()
 {
+	bReplicates = true;
+
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
@@ -61,10 +67,12 @@ APortal::APortal()
 	PortalMesh->SetRelativeRotation(FRotator(0.f, -90.f, 90.f));
 	PortalMesh->SetRelativeScale3D(FVector(1.5f, 2.3f, 2.3f));
 
+	// Set collision component
 	CollisionComponent = CreateDefaultSubobject<UBoxComponent>(TEXT("CollisionComponent"));
 	CollisionComponent->SetupAttachment(RootComponent);
 	CollisionComponent->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	CollisionComponent->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Overlap);
+	CollisionComponent->SetRelativeScale3D(FVector3d(0.5f, 1.5f, 2.5f));
 
 }
 
@@ -213,35 +221,91 @@ void APortal::UpdateSceneCapture()
 
 void APortal::BeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	AGEII_Project2Character* Character = Cast<AGEII_Project2Character>(OtherActor);
 	if (LinkedPortal && LinkedPortal->GetLinkedPortal())
 	{
-		if (Character)
+	// Check if overlapping actor is player
+		if (AGEII_Project2Character* Character = Cast<AGEII_Project2Character>(OtherActor))
 		{
-			PlayerInPortal = Character;
-
-			if (UCapsuleComponent* CapsuleComponent = PlayerInPortal->GetCapsuleComponent())
+			if (this->GetOwner() == nullptr)
 			{
-				CapsuleComponent->SetCollisionProfileName(TEXT("PortalPawn"));
-				CapsuleComponent->UpdateCollisionProfile();
+				PlayerInPortal = Character;
+				this->SetOwner(PlayerInPortal->GetController());
+				if (UCapsuleComponent* CapsuleComponent = PlayerInPortal->GetCapsuleComponent())
+				{
+					CapsuleComponent->SetCollisionProfileName(TEXT("PortalPawn"));
+					CapsuleComponent->UpdateCollisionProfile();
+				}
 			}
+		}
+		// Check if the overlapping actor is a projectile
+		if (AGEII_Project2Projectile* Projectile = Cast<AGEII_Project2Projectile>(OtherActor))
+		{
+			if (ProjectilesToIgnore.Contains(Projectile))
+			{
+				return;
+			}
+
+			// Add the projectile to the ignored set of the linked portal
+			LinkedPortal->AddProjectileToIgnore(Projectile);
+			
+			// Handle projectile teleportation
+			TeleportProjectile(Projectile);
 		}
 	}
 }
 
 void APortal::EndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-	AGEII_Project2Character* Character = Cast<AGEII_Project2Character>(OtherActor);
-	if (Character)
+	// Check if the exiting actor is a player character
+	if (AGEII_Project2Character* Character = Cast<AGEII_Project2Character>(OtherActor))
 	{
-		if (PlayerInPortal)
+		if (this->GetOwner())
 		{
-			UCapsuleComponent* CapsuleComponent = PlayerInPortal->GetCapsuleComponent();
-			CapsuleComponent->SetCollisionProfileName(TEXT("Pawn"));
-			CapsuleComponent->UpdateCollisionProfile();
+			if (PlayerInPortal)
+			{
+				UCapsuleComponent* CapsuleComponent = PlayerInPortal->GetCapsuleComponent();
+				CapsuleComponent->SetCollisionProfileName(TEXT("Pawn"));
+				CapsuleComponent->UpdateCollisionProfile();
+			}
+			PlayerInPortal = nullptr;
+			this->SetOwner(nullptr);
 		}
-		PlayerInPortal = nullptr;
 	}
+	// Check if the exiting actor is a projectile
+	if (AGEII_Project2Projectile* Projectile = Cast<AGEII_Project2Projectile>(OtherActor))
+	{
+		// Remove the projectile from the ignored set
+		ProjectilesToIgnore.Remove(Projectile);
+	}
+}
+
+void APortal::AddProjectileToIgnore(AGEII_Project2Projectile* Projectile)
+{
+	ProjectilesToIgnore.Add(Projectile);
+}
+
+void APortal::TeleportProjectile(AGEII_Project2Projectile* Projectile)
+{
+	// Get the projectile's current transform
+	FTransform ProjectileTransform = Projectile->GetActorTransform();
+
+	// Get the velocity of the projectile
+	FVector ProjectileVelocity = Projectile->GetVelocity();
+
+	// Convert the projectile's velocity from world to relative to the portal
+	FVector RelativeVelocity = UKismetMathLibrary::InverseTransformDirection(ProjectileTransform, ProjectileVelocity);
+
+	// Calculate the new position and rotation of the projectile based on the linked portal's transform
+	FTransform ConvertedTransform = UKismetMathLibrary::MakeRelativeTransform(ProjectileTransform, BackFacingScene->GetComponentTransform());
+	FTransform NewTransform = UKismetMathLibrary::ComposeTransforms(ConvertedTransform, LinkedPortal->GetActorTransform());
+
+	// Set the new location and rotation for the projectile
+	Projectile->SetActorLocation(NewTransform.GetLocation());
+	Projectile->SetActorRotation(NewTransform.GetRotation().Rotator());
+
+	// Update the projectile's velocity with the new transform
+	FVector NewVelocity = UKismetMathLibrary::TransformDirection(NewTransform, RelativeVelocity);
+	Projectile->GetProjectileMovement()->Velocity = NewVelocity;
 }
 
 void APortal::CheckPlayerCanTeleport(AGEII_Project2Character* Player)
@@ -270,7 +334,16 @@ void APortal::CheckPlayerCanTeleport(AGEII_Project2Character* Player)
 	// Check if player is behind the portal and going against the portal
 	if (DotProductForPlayerBehindPortal <= 0.f && DotProductForPlayerGoingAgainstPortal < 0.f)
 	{
-		TeleportPlayer(Player);
+		if (HasAuthority())
+		{
+			// Server teleport
+			TeleportPlayer(Player);
+		}
+		else
+		{
+			// Ask server to teleport
+			Server_TeleportPlayer(Player);
+		}
 	}
 }
 
@@ -280,42 +353,63 @@ void APortal::TeleportPlayer(AGEII_Project2Character* Player)
 	FTransform PlayerTransform = Player->GetActorTransform();
 
 	// Get the player's current velocity
-	FVector PlayerVelocity = Player->GetVelocity();
+	FVector playerVelocity = Player->GetVelocity();
 
 	// Convert the player's velocity from world to relative
-	FVector RelativeVelocity = UKismetMathLibrary::InverseTransformDirection(PlayerTransform, PlayerVelocity);
+	FVector relativeVelocity = UKismetMathLibrary::InverseTransformDirection(PlayerTransform, playerVelocity);
 
 	// Get the transform of the back facing scene component
-	FTransform BackFacingSceneTransform = BackFacingScene->GetComponentTransform();
+	FTransform backFacingSceneTransform = BackFacingScene->GetComponentTransform();
 
 	// get the transform of the player's camera component
-	FTransform PlayerCameraTransform = Player->GetFirstPersonCameraComponent()->GetComponentTransform();
+	FTransform playerCameraTransform = Player->GetFirstPersonCameraComponent()->GetComponentTransform();
 
 	// Calculate the relative transform of the player's camera in consideration to the back facing scene component
-	FTransform ConvertedTransform = UKismetMathLibrary::MakeRelativeTransform(PlayerCameraTransform, BackFacingSceneTransform);
+	FTransform convertedTransform = UKismetMathLibrary::MakeRelativeTransform(playerCameraTransform, backFacingSceneTransform);
 
 	// Calculate the player's relative transform with the linked portal's world transform
-	FTransform ComposedTransform = UKismetMathLibrary::ComposeTransforms(ConvertedTransform, LinkedPortal->GetActorTransform());
+	FTransform composedTransform = UKismetMathLibrary::ComposeTransforms(convertedTransform, LinkedPortal->GetActorTransform());
 
 	// Calculate the new location for the player, offset slightly in front of the linked portal by its forward vector for a more smooth transition
-	FVector NewLocation = (LinkedPortal->GetActorForwardVector() * 10) + (ComposedTransform.GetLocation() - Player->GetFirstPersonCameraComponent()->GetRelativeLocation());
+	FVector newLocation = (LinkedPortal->GetActorForwardVector() * 10) + (composedTransform.GetLocation() - Player->GetFirstPersonCameraComponent()->GetRelativeLocation());
 
 	// Calculate the new rotation for the player, ensuring that the roll is set to 0 to avoid unwanted tilting
-	FRotator NewRotation = FRotator(ComposedTransform.Rotator().Pitch, ComposedTransform.Rotator().Yaw, 0.f);
+	FRotator newRotation = FRotator(composedTransform.Rotator().Pitch, composedTransform.Rotator().Yaw, 0.f);
 
-	// Set the player's new location
-	Player->SetActorLocation(NewLocation);
+	// Set the player controller's new location
+	Player->SetActorLocation(newLocation);
 
 	// Update the player controller's rotation to match 
-	Player->GetController()->SetControlRotation(NewRotation);
+	Player->GetController()->ClientSetRotation(newRotation);
 
 	// Create a transform with the updated location and control rotation.
 	FTransform NewTransform = UKismetMathLibrary::MakeTransform(Player->GetActorLocation(), Player->GetController()->GetControlRotation());
 
 	// Update the player's velocity with the new transform
-	Player->GetMovementComponent()->Velocity = UKismetMathLibrary::TransformDirection(NewTransform, RelativeVelocity);
+	Player->GetMovementComponent()->Velocity = UKismetMathLibrary::TransformDirection(NewTransform, relativeVelocity);
 }
 
+
+void APortal::Server_TeleportPlayer_Implementation(AGEII_Project2Character* Player)
+{
+	if (HasAuthority())
+	{
+		if (GetOwner())
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Server_TeleportPlayer called by owner: %s"), *GetOwner()->GetName());
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Server_TeleportPlayer called, but no valid owner found"));
+		}
+
+		TeleportPlayer(Player);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Server_TeleportPlayer called on client, this should be called on the server!"));
+	}
+}
 
 void APortal::CheckPortalBounds()
 {

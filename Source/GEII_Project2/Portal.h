@@ -8,6 +8,7 @@
 #include "Components/BoxComponent.h"
 #include "Components/SceneCaptureComponent2D.h"
 #include "Engine/TextureRenderTarget2D.h"
+#include "GEII_Project2Projectile.h"
 #include "Portal.generated.h"
 
 UCLASS()
@@ -68,22 +69,6 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	// Function to give a reference of the Portal Camera to the Linked Portal requesting it
-	USceneCaptureComponent2D* GetSceneCapture() const;
-
-	// Function to receive reference of a portal to link
-	void SetPortalToLink(APortal* PortalToLink);
-
-	void PlacePortal(FVector NewLocation, FRotator NewRotation);
-
-	APortal* GetLinkedPortal();
-
-public:
-
-	void SetupLinkedPortal();
-
-	void SetCurrentWall(AActor* NewWall);
-
 private:
 	// Function to update the Linked Portal's Camera
 	void UpdateSceneCapture();
@@ -96,27 +81,78 @@ private:
 	UFUNCTION()
 	void EndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
-	UFUNCTION()
-	void CheckPlayerCanTeleport(AGEII_Project2Character* Player);
 
-	UFUNCTION()
-	void TeleportPlayer(AGEII_Project2Character* Player);
-
-	USceneCaptureComponent2D* LinkedPortalCamera;
-
+	
 private:
+	// Begin Player Teleport
+
 	AGEII_Project2Character* PlayerInPortal;
 
+	UFUNCTION(Category = "TeleportPlayer")
+	void CheckPlayerCanTeleport(AGEII_Project2Character* Player);
+
+	UFUNCTION(Category = "TeleportPlayer")
+	void TeleportPlayer(AGEII_Project2Character* Player);
+
+	UFUNCTION(Server, Reliable, Category= "TeleportPlayer")
+	void Server_TeleportPlayer(AGEII_Project2Character* Player);
+	
+	//End Player Teleport
+	
+
+private:
+	// Begin Projectile Teleport
+
+	UPROPERTY(VisibleAnywhere, Category = "TeleportProjectile")
+	TSet<AGEII_Project2Projectile*> ProjectilesToIgnore;
+
+	void TeleportProjectile(AGEII_Project2Projectile* Projectile);
+
+	void AddProjectileToIgnore(AGEII_Project2Projectile* Projectile);
+
+	//End Projectile Teleport
+
+private:
+	// Begin Portal Spawn
+
+	UPROPERTY()
+	USceneCaptureComponent2D* LinkedPortalCamera;
+
 protected:
-
-	FTimerHandle TimerHandle;
-
 	TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Portal")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PortalSpawn")
 	AActor* CurrentWall;
 
+	// Check and adjust portal position in the wall
+	UFUNCTION(Category = "PortalSpawn")
 	void CheckPortalBounds();
 
-	bool CheckLimitOutsideWall(UWorld* World, FVector Limit, FVector Center);
+public:
+
+	// Function to give a reference of the Portal Camera to the Linked Portal requesting it
+	UFUNCTION(Category = "PortalSpawn")
+	USceneCaptureComponent2D* GetSceneCapture() const;
+
+	// Function to receive reference of a portal to link
+	UFUNCTION(Category = "PortalSpawn")
+	void SetPortalToLink(APortal* PortalToLink);
+
+	// Place a portal adjacent to a wall
+	UFUNCTION(Category = "PortalSpawn")
+	void PlacePortal(FVector NewLocation, FRotator NewRotation);
+
+	// Get a reference to the linked portal
+	UFUNCTION(Category = "PortalSpawn")
+	APortal* GetLinkedPortal();
+
+	// Setup the linked portal for the render target
+	UFUNCTION(Category = "PortalSpawn")
+	void SetupLinkedPortal();
+
+	// Set the current wall to be the one the portal spawned in
+	UFUNCTION(Category = "PortalSpawn")
+	void SetCurrentWall(AActor* NewWall);
+
+	// End Portal Spawn
 };
