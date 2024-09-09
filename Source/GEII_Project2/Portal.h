@@ -84,7 +84,7 @@ private:
 
 	
 private:
-	// Begin Player Teleport
+	// ---- Begin Player Teleport ---- //
 
 	AGEII_Project2Character* PlayerInPortal;
 
@@ -97,11 +97,11 @@ private:
 	UFUNCTION(Server, Reliable, Category= "TeleportPlayer")
 	void Server_TeleportPlayer(AGEII_Project2Character* Player);
 	
-	//End Player Teleport
+	// ---- End Player Teleport ---- //
 	
 
 private:
-	// Begin Projectile Teleport
+	// ---- Begin Projectile Teleport ---- //
 
 	UPROPERTY(VisibleAnywhere, Category = "TeleportProjectile")
 	TSet<AGEII_Project2Projectile*> ProjectilesToIgnore;
@@ -110,10 +110,10 @@ private:
 
 	void AddProjectileToIgnore(AGEII_Project2Projectile* Projectile);
 
-	//End Projectile Teleport
+	// ---- End Projectile Teleport ---- //
 
 private:
-	// Begin Portal Spawn
+	// ---- Begin Portal Spawn ---- //
 
 	UPROPERTY()
 	USceneCaptureComponent2D* LinkedPortalCamera;
@@ -154,5 +154,5 @@ public:
 	UFUNCTION(Category = "PortalSpawn")
 	void SetCurrentWall(AActor* NewWall);
 
-	// End Portal Spawn
+	// ---- End Portal Spawn ---- //
 };

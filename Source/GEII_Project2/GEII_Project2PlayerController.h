@@ -22,14 +22,12 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
 	UInputMappingContext* InputMappingContext;
 
-	// Begin Actor interface
 protected:
 
 	virtual void BeginPlay() override;
 
-	// End Actor interface
-
 protected: 
+
 	/** Server function for spawning the character */
 	UFUNCTION(BlueprintCallable, Server, Reliable)
 	void Server_SpawnPlayer();

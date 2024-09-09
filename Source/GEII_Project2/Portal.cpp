@@ -87,10 +87,6 @@ void APortal::BeginPlay()
 	FBoxSphereBounds Bounds = PortalMesh->GetStaticMesh()->GetBounds();
 	FVector BoxExtent = Bounds.BoxExtent;
 
-	// Set the size of the collision box
-	CollisionComponent->SetBoxExtent(BoxExtent);
-	CollisionComponent->UpdateBounds();
-
 	// Bind overlap functions to the portal
 	CollisionComponent->OnComponentBeginOverlap.AddDynamic(this, &APortal::BeginOverlap);
 	CollisionComponent->OnComponentEndOverlap.AddDynamic(this, &APortal::EndOverlap);
@@ -244,7 +240,6 @@ void APortal::BeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* Oth
 			{
 				return;
 			}
-
 			// Add the projectile to the ignored set of the linked portal
 			LinkedPortal->AddProjectileToIgnore(Projectile);
 			
@@ -293,18 +288,21 @@ void APortal::TeleportProjectile(AGEII_Project2Projectile* Projectile)
 	FVector ProjectileVelocity = Projectile->GetVelocity();
 
 	// Convert the projectile's velocity from world to relative to the portal
-	FVector RelativeVelocity = UKismetMathLibrary::InverseTransformDirection(ProjectileTransform, ProjectileVelocity);
+	FVector RelativeVelocity = UKismetMathLibrary::InverseTransformDirection(BackFacingScene->GetComponentTransform(), ProjectileVelocity);
 
-	// Calculate the new position and rotation of the projectile based on the linked portal's transform
-	FTransform ConvertedTransform = UKismetMathLibrary::MakeRelativeTransform(ProjectileTransform, BackFacingScene->GetComponentTransform());
-	FTransform NewTransform = UKismetMathLibrary::ComposeTransforms(ConvertedTransform, LinkedPortal->GetActorTransform());
+	// Calculate the projectile's position relative to the portal
+	FTransform RelativeProjectileTransform = UKismetMathLibrary::MakeRelativeTransform(ProjectileTransform, BackFacingScene->GetComponentTransform());
+
+	// Calculate the new position and rotation relative to the linked portal
+	FTransform NewTransform = UKismetMathLibrary::ComposeTransforms(RelativeProjectileTransform, LinkedPortal->GetActorTransform());
+
 
 	// Set the new location and rotation for the projectile
 	Projectile->SetActorLocation(NewTransform.GetLocation());
 	Projectile->SetActorRotation(NewTransform.GetRotation().Rotator());
 
 	// Update the projectile's velocity with the new transform
-	FVector NewVelocity = UKismetMathLibrary::TransformDirection(NewTransform, RelativeVelocity);
+	FVector NewVelocity = UKismetMathLibrary::TransformDirection(LinkedPortal->GetActorTransform(), RelativeVelocity);
 	Projectile->GetProjectileMovement()->Velocity = NewVelocity;
 }
 

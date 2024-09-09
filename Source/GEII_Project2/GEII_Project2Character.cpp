@@ -10,10 +10,10 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 #include "Engine/LocalPlayer.h"
-#include "Net/UnrealNetwork.h"
 #include "TP_WeaponComponent.h"
 #include "Engine/World.h"
 #include "UObject/UObjectGlobals.h"
+#include "Net/UnrealNetwork.h"
 #include "Engine/Engine.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
@@ -45,6 +45,10 @@ AGEII_Project2Character::AGEII_Project2Character()
 	Mesh1P->SetRelativeLocation(FVector(-30.f, 0.f, -150.f));
 
 	bReplicates = true;
+
+	// Initialize the player's Health
+	MaxHealth = 100.0f;
+	CurrentHealth =	MaxHealth;
 }
 
 void AGEII_Project2Character::BeginPlay()
@@ -129,8 +133,10 @@ void AGEII_Project2Character::GetLifetimeReplicatedProps(TArray<FLifetimePropert
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	// Replicate Character Color
-	DOREPLIFETIME(AGEII_Project2Character, CharacterColor)
+	// Replicate character color
+	DOREPLIFETIME(AGEII_Project2Character, CharacterColor);
+	// Replicate current health
+	DOREPLIFETIME(AGEII_Project2Character, CurrentHealth);
 }
 
 void AGEII_Project2Character::ChangeColor(FLinearColor NewColor)
@@ -158,3 +164,51 @@ void AGEII_Project2Character::Server_ChangeColor_Implementation(FLinearColor New
 	// Change Color with authority
 	ChangeColor(NewColor);
 }
+
+void AGEII_Project2Character::OnRep_CurrentHealth()
+{
+	OnHealthUpdate();
+}
+
+void AGEII_Project2Character::OnHealthUpdate()
+{
+	// Client-specific functionality
+	if (IsLocallyControlled())
+	{
+		FString healthMessage = FString::Printf(TEXT("You now have %f health remaining."), CurrentHealth);
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, healthMessage);
+		if (CurrentHealth <= 0)
+		{
+			FString deathMessage = FString::Printf(TEXT("You have been killed."));
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, deathMessage);
+		}
+	}
+	//Server-specific functionality
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		FString healthMessage = FString::Printf(TEXT("%s now has %f health remaining."), *GetFName().ToString(), CurrentHealth);
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, healthMessage);
+	}
+	//Functions that occur on all machines.
+	/*
+	Any special functionality that should occur as a result of damage or death should
+	be placed here.
+	*/
+}
+
+void AGEII_Project2Character::SetCurrentHealth(float healthValue)
+{
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		CurrentHealth = FMath::Clamp(healthValue, 0.f, MaxHealth);
+		OnHealthUpdate();
+	}
+}
+
+float AGEII_Project2Character::TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+	float damageApplied = CurrentHealth - DamageTaken;
+	SetCurrentHealth(damageApplied);
+	return damageApplied;
+}
+
