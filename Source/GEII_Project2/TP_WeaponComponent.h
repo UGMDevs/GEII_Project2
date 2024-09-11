@@ -55,6 +55,8 @@ public:
 	UFUNCTION()
 	void HandleFire();
 
+
+
 protected:
 	/** Ends gameplay for this component. */
 	UFUNCTION()

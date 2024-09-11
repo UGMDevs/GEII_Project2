@@ -49,6 +49,12 @@ AGEII_Project2Character::AGEII_Project2Character()
 	// Initialize the player's Health
 	MaxHealth = 100.0f;
 	CurrentHealth =	MaxHealth;
+
+	InventoryComponent = CreateDefaultSubobject<UAC_Inventory>(TEXT("InventoryComponent"));
+	
+	StartingWeaponComponent = CreateDefaultSubobject<UTP_WeaponComponent>(TEXT("StartingWeaponComponent"));
+	StartingWeaponComponent->SetupAttachment(GetMesh1P()); 
+
 }
 
 void AGEII_Project2Character::BeginPlay()
@@ -65,6 +71,11 @@ void AGEII_Project2Character::BeginPlay()
 		}
 	}
 
+	if (InventoryComponent && StartingWeaponComponent)
+	{
+		InventoryComponent->SetStartingWeapon(StartingWeaponComponent);
+	}
+	
 }
 
 //////////////////////////////////////////////////////////////////////////// Input

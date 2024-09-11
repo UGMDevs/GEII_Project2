@@ -92,6 +92,8 @@ void UTP_WeaponComponent::HandleFire()
 	}
 }
 
+
+
 void UTP_WeaponComponent::AttachWeapon(AGEII_Project2Character* TargetCharacter)
 {
 	Character = TargetCharacter;

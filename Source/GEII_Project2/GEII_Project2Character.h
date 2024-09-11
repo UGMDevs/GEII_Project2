@@ -6,7 +6,9 @@
 #include "GameFramework/Character.h"
 #include "Logging/LogMacros.h"
 #include "TP_WeaponComponent.h"
+#include "AC_Inventory.h"
 #include "GEII_Project2Character.generated.h"
+
 
 class UInputComponent;
 class USkeletalMeshComponent;
@@ -93,7 +95,14 @@ public:
 
 	// New Code
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
+	UAC_Inventory* InventoryComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
+    UTP_WeaponComponent* StartingWeaponComponent; // Reference to the weapon component */
+
 	// ---- Begin Change Character Color ---- //
+
 protected:
 	/** Character's current color */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_CharacterColor, Category = "Color")
