@@ -113,7 +113,7 @@ void APortal::BeginPlay()
 
 		// Set the Render Target 2D to the texture parameter value of the Portal_MAT
 		Portal_MAT->SetTextureParameterValue("Texture", Portal_RT);
-	}
+	} 
 
 	SetupLinkedPortal();
 }
@@ -217,9 +217,26 @@ void APortal::UpdateSceneCapture()
 
 void APortal::BeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	if (LinkedPortal && LinkedPortal->GetLinkedPortal())
+	if (LinkedPortal && LinkedPortal->GetLinkedPortal() == this)
 	{
-	// Check if overlapping actor is player
+		// Check if the overlapping actor is a projectile
+		if (AGEII_Project2Projectile* Projectile = Cast<AGEII_Project2Projectile>(OtherActor))
+		{
+			if (ProjectilesToIgnore.Contains(Projectile))
+			{
+				return;
+			}
+
+			// Set to ignore the portal's current wall
+			Projectile->GetCollisionComp()->IgnoreActorWhenMoving(CurrentWall, true);
+
+			// Add the projectile to the ignored set of the linked portal
+			LinkedPortal->AddProjectileToIgnore(Projectile);
+
+			// Handle projectile teleportation
+			TeleportProjectile(Projectile);
+		}
+		// Check if overlapping actor is player
 		if (AGEII_Project2Character* Character = Cast<AGEII_Project2Character>(OtherActor))
 		{
 			if (this->GetOwner() == nullptr)
@@ -232,19 +249,6 @@ void APortal::BeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* Oth
 					CapsuleComponent->UpdateCollisionProfile();
 				}
 			}
-		}
-		// Check if the overlapping actor is a projectile
-		if (AGEII_Project2Projectile* Projectile = Cast<AGEII_Project2Projectile>(OtherActor))
-		{
-			if (ProjectilesToIgnore.Contains(Projectile))
-			{
-				return;
-			}
-			// Add the projectile to the ignored set of the linked portal
-			LinkedPortal->AddProjectileToIgnore(Projectile);
-			
-			// Handle projectile teleportation
-			TeleportProjectile(Projectile);
 		}
 	}
 }
@@ -269,6 +273,7 @@ void APortal::EndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* Other
 	// Check if the exiting actor is a projectile
 	if (AGEII_Project2Projectile* Projectile = Cast<AGEII_Project2Projectile>(OtherActor))
 	{
+		Projectile->GetCollisionComp()->IgnoreActorWhenMoving(CurrentWall, false);
 		// Remove the projectile from the ignored set
 		ProjectilesToIgnore.Remove(Projectile);
 	}
@@ -276,6 +281,9 @@ void APortal::EndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* Other
 
 void APortal::AddProjectileToIgnore(AGEII_Project2Projectile* Projectile)
 {
+	// This function is usually called in the LinkedPortal, making this to be the LinkedPortal
+	// Set to ignore the portal's current wall
+	Projectile->GetCollisionComp()->IgnoreActorWhenMoving(CurrentWall, true);
 	ProjectilesToIgnore.Add(Projectile);
 }
 
@@ -304,6 +312,9 @@ void APortal::TeleportProjectile(AGEII_Project2Projectile* Projectile)
 	// Update the projectile's velocity with the new transform
 	FVector NewVelocity = UKismetMathLibrary::TransformDirection(LinkedPortal->GetActorTransform(), RelativeVelocity);
 	Projectile->GetProjectileMovement()->Velocity = NewVelocity;
+
+	// Set to stop ignoring the portal's current wall
+	Projectile->GetCollisionComp()->IgnoreActorWhenMoving(CurrentWall, false);
 }
 
 void APortal::CheckPlayerCanTeleport(AGEII_Project2Character* Player)

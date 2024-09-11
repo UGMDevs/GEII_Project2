@@ -41,7 +41,6 @@ AGEII_Project2Projectile::AGEII_Project2Projectile()
 	{
 		StaticMesh->SetStaticMesh(DefaultMesh.Object);
 		StaticMesh->SetRelativeScale3D(FVector(0.03f, 0.03f, 0.03f));
-		StaticMesh->SetCollisionProfileName("NoCollision");
 	}
 
 	// Definition for the particle effect
@@ -76,12 +75,12 @@ AGEII_Project2Projectile::AGEII_Project2Projectile()
 void AGEII_Project2Projectile::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
 	// Only add impulse and destroy projectile if we hit a physics
-	if ((OtherActor != nullptr) && (OtherActor != this) && (OtherComp != nullptr) && OtherComp->IsSimulatingPhysics())
+	if ((OtherActor != nullptr) && (OtherActor != this) && (OtherComp != nullptr))
 	{
-		OtherComp->AddImpulseAtLocation(GetVelocity() * 100.0f, GetActorLocation());
+		UGameplayStatics::ApplyPointDamage(OtherActor, Damage, NormalImpulse, Hit, GetInstigator()->Controller, this, DamageType);
 		Destroy();
 	}
-
+	
 }
 
 void AGEII_Project2Projectile::Destroyed()
