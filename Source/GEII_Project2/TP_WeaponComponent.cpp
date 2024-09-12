@@ -51,7 +51,7 @@ void UTP_WeaponComponent::Server_Reload_Implementation()
 	ReloadWeapon();
 }
 
-void UTP_WeaponComponent::HandleFire()
+void UTP_WeaponComponent::HandleFire_Implementation()
 {
 	// Try and fire a projectile
 	if (ProjectileClass != nullptr)
@@ -151,10 +151,6 @@ void UTP_WeaponComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 	DOREPLIFETIME(UTP_WeaponComponent, ClipAmmo);
 	DOREPLIFETIME(UTP_WeaponComponent, TotalAmmo);
 }
-
-
-
-
 
 void UTP_WeaponComponent::AttachWeapon(AGEII_Project2Character* TargetCharacter)
 {

@@ -54,9 +54,6 @@ public:
 	void Fire();
 
 	UFUNCTION(Server, Reliable)
-	void Server_Fire();
-
-	UFUNCTION(Server, Reliable)
 	void Server_Reload();
 
 	/** Function to reload the weapon */
