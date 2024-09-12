@@ -20,6 +20,13 @@ UTP_WeaponComponent::UTP_WeaponComponent()
 	// Initialize fire rate
 	FireRate = 0.25f;
 	bIsFiringWeapon = false;
+
+	MaxTotalAmmo = 100;
+	MaxClipAmmo = 12;
+	TotalAmmo = 64;
+	ClipAmmo = 12;
+	ReloadTime = 1.0f;
+
 }
 
 
@@ -39,7 +46,12 @@ void UTP_WeaponComponent::StopFire()
 	bIsFiringWeapon = false;
 }
 
-void UTP_WeaponComponent::HandleFire_Implementation()
+void UTP_WeaponComponent::Server_Reload_Implementation()
+{
+	ReloadWeapon();
+}
+
+void UTP_WeaponComponent::HandleFire()
 {
 	// Try and fire a projectile
 	if (ProjectileClass != nullptr)
@@ -47,22 +59,39 @@ void UTP_WeaponComponent::HandleFire_Implementation()
 		UWorld* const World = GetWorld();
 		if (World != nullptr)
 		{
-			APlayerController* PlayerController = Cast<APlayerController>(Character->GetController());
-			const FRotator SpawnRotation = PlayerController->PlayerCameraManager->GetCameraRotation();
-			// MuzzleOffset is in camera space, so transform it to world space before offsetting from the character location to find the final muzzle position
-			const FVector SpawnLocation = GetOwner()->GetActorLocation() + SpawnRotation.RotateVector(MuzzleOffset);
+			if (ClipAmmo > 0)
+			{
+				APlayerController* PlayerController = Cast<APlayerController>(Character->GetController());
+				const FRotator SpawnRotation = PlayerController->PlayerCameraManager->GetCameraRotation();
+				// MuzzleOffset is in camera space, so transform it to world space before offsetting from the character location to find the final muzzle position
+				const FVector SpawnLocation = GetOwner()->GetActorLocation() + SpawnRotation.RotateVector(MuzzleOffset);
 
-			//Set Spawn Collision Handling Override
-			FActorSpawnParameters ActorSpawnParams;
-			ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
-			ActorSpawnParams.Owner = Character;
-			ActorSpawnParams.Instigator = Character;
+				//Set Spawn Collision Handling Override
+				FActorSpawnParameters ActorSpawnParams;
+				ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
+				ActorSpawnParams.Owner = Character;
+				ActorSpawnParams.Instigator = Character;
 
-			// Spawn the projectile at the muzzle
-			UE_LOG(LogTemp, Warning, TEXT("Spawning Projectile"));
-			World->SpawnActor<AGEII_Project2Projectile>(ProjectileClass, SpawnLocation, SpawnRotation, ActorSpawnParams);
+				// Spawn the projectile at the muzzle
+				UE_LOG(LogTemp, Warning, TEXT("Spawning Projectile"));
+				World->SpawnActor<AGEII_Project2Projectile>(ProjectileClass, SpawnLocation, SpawnRotation, ActorSpawnParams);
+			
+				ClipAmmo -= 1;
+			}
+			else if (TotalAmmo > 0)
+			{
+				// If we want to reload automatically when trying to fire when out of bullets
+				//ReloadWeapon();
+			}
 		}
 	}
+
+	// Try and play the sound if specified
+	if (FireSound != nullptr)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, FireSound, Character->GetActorLocation());
+	}
+
 	// Try and play the sound if specified
 	if (FireSound != nullptr)
 	{
@@ -83,6 +112,49 @@ void UTP_WeaponComponent::HandleFire_Implementation()
 		}
 	}
 }
+
+void UTP_WeaponComponent::ReloadWeapon()
+{
+	if (Character == nullptr)
+	{
+		return;
+	}
+
+	if (Character->GetLocalRole() == ROLE_Authority)
+	{
+		// Only handle reload logic on the server
+		if (ClipAmmo != MaxClipAmmo)
+		{
+			if (TotalAmmo - (MaxClipAmmo - ClipAmmo) >= 0)
+			{
+				TotalAmmo -= (MaxClipAmmo - ClipAmmo);
+				ClipAmmo = MaxClipAmmo;
+			}
+			else
+			{
+				ClipAmmo += TotalAmmo;
+				TotalAmmo = 0;
+			}
+		}
+	}
+	else
+	{
+		Server_Reload(); // Request server to handle reloading
+	}
+
+}
+
+void UTP_WeaponComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(UTP_WeaponComponent, ClipAmmo);
+	DOREPLIFETIME(UTP_WeaponComponent, TotalAmmo);
+}
+
+
+
+
 
 void UTP_WeaponComponent::AttachWeapon(AGEII_Project2Character* TargetCharacter)
 {
@@ -115,6 +187,9 @@ void UTP_WeaponComponent::AttachWeapon(AGEII_Project2Character* TargetCharacter)
 		{
 			// Fire
 			EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Triggered, this, &UTP_WeaponComponent::Fire);
+
+			// Reload
+			EnhancedInputComponent->BindAction(Reload, ETriggerEvent::Triggered, this, &UTP_WeaponComponent::ReloadWeapon);
 		}
 	}
 }

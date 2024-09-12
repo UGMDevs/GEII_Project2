@@ -38,6 +38,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
 	class UInputAction* FireAction;
 
+	/** Look Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* Reload;
+
 	/** Sets default values for this component's properties */
 	UTP_WeaponComponent();
 
@@ -49,11 +53,37 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void Fire();
 
+	UFUNCTION(Server, Reliable)
+	void Server_Fire();
+
+	UFUNCTION(Server, Reliable)
+	void Server_Reload();
+
+	/** Function to reload the weapon */
+	UFUNCTION()
+	virtual void ReloadWeapon();
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Weapon")
+	int MaxTotalAmmo;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Weapon")
+	int MaxClipAmmo;
+
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Weapon")
+	int TotalAmmo;
+
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Weapon")
+	int ClipAmmo;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Weapon")
+	float ReloadTime;
+
 protected:
 	/** Ends gameplay for this component. */
 	UFUNCTION()
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-
 	/** The Character holding this weapon*/
 	AGEII_Project2Character* Character;
 

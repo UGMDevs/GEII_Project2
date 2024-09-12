@@ -17,6 +17,7 @@
 #include "Engine/Engine.h"
 #include "Engine/DamageEvents.h"
 
+
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
 //////////////////////////////////////////////////////////////////////////
