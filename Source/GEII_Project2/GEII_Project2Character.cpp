@@ -49,11 +49,9 @@ AGEII_Project2Character::AGEII_Project2Character()
 	// Initialize the player's Health
 	MaxHealth = 100.0f;
 	CurrentHealth =	MaxHealth;
-
-	/*InventoryComponent = CreateDefaultSubobject<UAC_Inventory>(TEXT("InventoryComponent"));*/
 	
-// 	StartingWeaponComponent = CreateDefaultSubobject<UTP_WeaponComponent>(TEXT("StartingWeaponComponent"));
-// 	StartingWeaponComponent->SetupAttachment(GetMesh1P());
+	CurrentWeaponComponent = CreateDefaultSubobject<UTP_WeaponComponent>(TEXT("StartingWeaponComponent"));
+	CurrentWeaponComponent->SetupAttachment(GetMesh1P());
 
 }
 
@@ -70,12 +68,6 @@ void AGEII_Project2Character::BeginPlay()
 			Subsystem->AddMappingContext(DefaultMappingContext, 0);
 		}
 	}
-
-// 	if (InventoryComponent && StartingWeaponComponent)
-// 	{
-// 		InventoryComponent->SetStartingWeapon(StartingWeaponComponent);
-// 	}
-	
 }
 
 //////////////////////////////////////////////////////////////////////////// Input
@@ -131,6 +123,13 @@ void AGEII_Project2Character::Look(const FInputActionValue& Value)
 void AGEII_Project2Character::SetHasRifle(bool bNewHasRifle)
 {
 	bHasRifle = bNewHasRifle;
+	if(!bHasRifle)
+	{
+		if(CurrentWeaponComponent)
+		{
+			CurrentWeaponComponent->DestroyComponent();
+		}
+	}
 }
 
 bool AGEII_Project2Character::GetHasRifle()

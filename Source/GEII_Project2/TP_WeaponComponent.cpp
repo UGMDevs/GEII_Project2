@@ -71,14 +71,14 @@ void UTP_WeaponComponent::HandleFire()
 		}
 	}
 
+	// Try and play the sound if specified
+	if (FireSound != nullptr)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, FireSound, Character->GetActorLocation());
+	}
+
 	if (Character->IsLocallyControlled())
 	{
-		// Try and play the sound if specified
-		if (FireSound != nullptr)
-		{
-			UGameplayStatics::PlaySoundAtLocation(this, FireSound, Character->GetActorLocation());
-		}
-
 		// Try and play a firing animation if specified
 		if (FireAnimation != nullptr)
 		{
@@ -91,8 +91,6 @@ void UTP_WeaponComponent::HandleFire()
 		}
 	}
 }
-
-
 
 void UTP_WeaponComponent::AttachWeapon(AGEII_Project2Character* TargetCharacter)
 {
@@ -107,6 +105,7 @@ void UTP_WeaponComponent::AttachWeapon(AGEII_Project2Character* TargetCharacter)
 	// Attach the weapon to the First Person Character
 	FAttachmentTransformRules AttachmentRules(EAttachmentRule::SnapToTarget, true);
 	AttachToComponent(Character->GetMesh1P(), AttachmentRules, FName(TEXT("GripPoint")));
+	this->SetupAttachment(Character->GetMesh1P());
 	
 	// switch bHasRifle so the animation blueprint can switch to another animation set
 	Character->SetHasRifle(true);

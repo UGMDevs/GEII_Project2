@@ -25,12 +25,13 @@ UTP_AssaultRifle::UTP_AssaultRifle()
 	// Damage
 	DamageType = UDamageType::StaticClass();
 	Damage = 10.0f;
+
+	NumberOfFiringBullets = 1;
+	SpreadAngle = 0.f;
 }
 
 void UTP_AssaultRifle::HandleFire()
 {
-	if (Character->GetLocalRole() == ROLE_Authority)
-	{
 		// Try and do a line trace
 		UWorld* const World = GetWorld();
 		if (World != nullptr)
@@ -46,47 +47,59 @@ void UTP_AssaultRifle::HandleFire()
 			FRotator CameraRotation;
 			PlayerController->GetPlayerViewPoint(CameraLocation, CameraRotation);
 
-			// Calculate end location for line trace
-			FVector EndLocation = CameraLocation + (CameraRotation.Vector() * 4000.f);
-
-			// Perform line trace using visibility line trace
-			FHitResult HitResult;
-			FCollisionQueryParams CollisionParams;
-			CollisionParams.AddIgnoredActor(Character);
-			bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, CameraLocation, EndLocation, ECC_Camera, CollisionParams);
-
-			// Try and play the sound if specified
-			if (FireSound != nullptr)
+			if (NumberOfFiringBullets > 0)
 			{
-				UGameplayStatics::PlaySoundAtLocation(this, FireSound, Character->GetActorLocation());
-			}
-
-			// Try and play a firing animation if specified
-			if (FireAnimation != nullptr)
-			{
-				// Get the animation object for the arms mesh
-				UAnimInstance* AnimInstance = Character->GetMesh1P()->GetAnimInstance();
-				if (AnimInstance != nullptr)
+				// Try and play the sound if specified
+				if (FireSound != nullptr)
 				{
-					AnimInstance->Montage_Play(FireAnimation, 1.f);
+					UGameplayStatics::PlaySoundAtLocation(this, FireSound, Character->GetActorLocation());
+				}
+
+				// Try and play a firing animation if specified
+				if (FireAnimation != nullptr)
+				{
+					// Get the animation object for the arms mesh
+					UAnimInstance* AnimInstance = Character->GetMesh1P()->GetAnimInstance();
+					if (AnimInstance != nullptr)
+					{
+						AnimInstance->Montage_Play(FireAnimation, 1.f);
+					}
+				}
+				for( int32 i = 0; i< NumberOfFiringBullets; i++)
+				{
+					// Generate random yaw and pitch variation within the spread angle
+					float RandomYaw = FMath::RandRange(-SpreadAngle, SpreadAngle);
+					float RandomPitch = FMath::RandRange(-SpreadAngle, SpreadAngle);
+
+					// Calculate end location for line trace
+					FRotator AdjustedDirection = CameraRotation;
+					AdjustedDirection.Yaw += RandomYaw;
+					AdjustedDirection.Pitch += RandomPitch;
+
+					FVector EndLocation = CameraLocation + (AdjustedDirection.Vector() * 4000.f);
+				
+					// Perform line trace using visibility line trace
+					FHitResult HitResult;
+					FCollisionQueryParams CollisionParams;
+					CollisionParams.AddIgnoredActor(Character);
+					bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, CameraLocation, EndLocation, ECC_Camera, CollisionParams);
+
+					if (bHit)
+					{
+						GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Green, TEXT("Hit"));
+						UGameplayStatics::ApplyDamage(HitResult.GetActor(), Damage, GetOwner()->GetInstigator()->Controller, this->GetOwner(), DamageType);
+		
+						FVector spawnLocation = HitResult.Location;
+						UGameplayStatics::SpawnEmitterAtLocation(
+							this,
+							ExplosionEffect,
+							spawnLocation,
+							FRotator::ZeroRotator,
+							true,
+							EPSCPoolMethod::AutoRelease
+						);
+					}
 				}
 			}
-
-			if (bHit)
-			{
-				GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Green, TEXT("Hit"));
-				UGameplayStatics::ApplyDamage(HitResult.GetActor(), Damage, GetOwner()->GetInstigator()->Controller, this->GetOwner(), DamageType);
-
-				FVector spawnLocation = HitResult.Location;
-				UGameplayStatics::SpawnEmitterAtLocation(
-					this,
-					ExplosionEffect,
-					spawnLocation,
-					FRotator::ZeroRotator,
-					true,
-					EPSCPoolMethod::AutoRelease
-				);
-			}
 		}
-	}
 }

@@ -53,6 +53,11 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Damage")
 	float Damage;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Damage")
+	float DamageRadius;
+
+	TArray<AActor*> IgnoreActors;
+
 	virtual void Destroyed() override;
 
 	//---- End Damage ---- //

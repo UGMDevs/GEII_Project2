@@ -14,7 +14,7 @@ AGEII_Project2Projectile::AGEII_Project2Projectile()
 {
 	// Use a sphere as a simple collision representation
 	CollisionComp = CreateDefaultSubobject<USphereComponent>(TEXT("SphereComp"));
-	CollisionComp->InitSphereRadius(5.0f);
+	CollisionComp->InitSphereRadius(20.0f);
 	CollisionComp->SetCollisionProfileName(TEXT("BlockAllDynamic"));
 	CollisionComp->BodyInstance.SetCollisionProfileName("Projectile");
 	if(GetLocalRole() == ROLE_Authority)
@@ -40,7 +40,7 @@ AGEII_Project2Projectile::AGEII_Project2Projectile()
 	if (DefaultMesh.Succeeded())
 	{
 		StaticMesh->SetStaticMesh(DefaultMesh.Object);
-		StaticMesh->SetRelativeScale3D(FVector(0.03f, 0.03f, 0.03f));
+		StaticMesh->SetRelativeScale3D(FVector(0.12f, 0.12f, 0.12f));
 	}
 
 	// Definition for the particle effect
@@ -69,7 +69,8 @@ AGEII_Project2Projectile::AGEII_Project2Projectile()
 
 	// Damage
 	DamageType = UDamageType::StaticClass();
-	Damage = 10.0f;
+	Damage = 30.0f;
+	DamageRadius = 300.f;
 }
 
 void AGEII_Project2Projectile::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
@@ -77,7 +78,8 @@ void AGEII_Project2Projectile::OnHit(UPrimitiveComponent* HitComp, AActor* Other
 	// Only add impulse and destroy projectile if we hit a physics
 	if ((OtherActor != nullptr) && (OtherActor != this) && (OtherComp != nullptr))
 	{
-		UGameplayStatics::ApplyPointDamage(OtherActor, Damage, NormalImpulse, Hit, GetInstigator()->Controller, this, DamageType);
+		UGameplayStatics::ApplyRadialDamage(GetWorld(), Damage, GetActorLocation(), DamageRadius, DamageType, IgnoreActors, this, nullptr, false, ECC_Visibility);
+		DrawDebugSphere(GetWorld(), GetActorLocation(), DamageRadius, 16, FColor::Red, false, 2.f);
 		Destroy();
 	}
 	

@@ -26,4 +26,11 @@ protected:
 	//The damage dealt by this projectile.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Damage")
 	float Damage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shoot")
+	int32 NumberOfFiringBullets;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shoot")
+	float SpreadAngle;
+
 };

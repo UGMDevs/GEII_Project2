@@ -15,6 +15,8 @@ APickUpWeapon::APickUpWeapon()
     CollisionComponent->OnComponentBeginOverlap.AddDynamic(this, &APickUpWeapon::OnOverlapBegin);
     RootComponent = CollisionComponent;
 
+    Weapon = CreateDefaultSubobject<UTP_WeaponComponent>(TEXT("Weapon"));
+    Weapon->SetupAttachment(RootComponent);
 }
 
 // Called when the game starts or when spawned
@@ -27,22 +29,21 @@ void APickUpWeapon::BeginPlay()
 void APickUpWeapon::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
     AGEII_Project2Character* Character = Cast<AGEII_Project2Character>(OtherActor);
-    if (Character && WeaponClass)
+    if (Character && Weapon)
     {
-        UAC_Inventory* InventoryComponent = Character->FindComponentByClass<UAC_Inventory>();
-        if (InventoryComponent)
-        {
-            // Add the weapon class to the inventory
-            InventoryComponent->AddWeapon(WeaponClass);
-
-            // Switch to the newly added weapon
-            InventoryComponent->SwitchWeapon(InventoryComponent->GetWeapons().Num() - 1);
-
-            // Destroy the pickup actor
-            Destroy();
-        }
+        Character->AddWeapon(Weapon->GetClass());
+        // Initiate Timer Handle
+        // Call Server Function to initiate the timer
+        // Server_Timer();
+        Destroy();
     }
 }
 
+/* void Server_Timer()
+{
+    SetActive(false);
+    Initiate timer
+}
+*/
 
-
+// Something like that? Dunno...
