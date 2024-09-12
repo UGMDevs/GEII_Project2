@@ -49,14 +49,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void Fire();
 
-	UFUNCTION(Server, Reliable)
-	void Server_Fire();
-
-	UFUNCTION()
-	virtual void HandleFire();
-
-
-
 protected:
 	/** Ends gameplay for this component. */
 	UFUNCTION()
@@ -64,4 +56,26 @@ protected:
 
 	/** The Character holding this weapon*/
 	AGEII_Project2Character* Character;
+
+public:
+	UFUNCTION(Server, Reliable)
+	virtual void HandleFire();
+
+protected:
+	/** Delay between shots in seconds. Used to control fire rate for your test
+	projectile, but also to prevent an overflow of server functions from binding
+	SpawnProjectile directly to input.*/
+	UPROPERTY(EditDefaultsOnly, Category = "WeaponFire")
+	float FireRate;
+
+	/** If true, you are in the process of firing projectiles. */
+	bool bIsFiringWeapon;
+
+	/** Function for ending weapon fire. Once this is called, the player can use
+	StartFire again.*/
+	UFUNCTION(BlueprintCallable, Category = "WeaponFire")
+	void StopFire();
+
+	/** A timer handle used for providing the fire rate delay in-between spawns.*/
+	FTimerHandle FiringTimer;
 };

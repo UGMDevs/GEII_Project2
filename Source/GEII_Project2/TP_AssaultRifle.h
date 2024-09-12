@@ -27,10 +27,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Damage")
 	float Damage;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shoot")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "WeaponFire")
 	int32 NumberOfFiringBullets;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Shoot")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "WeaponFire")
 	float SpreadAngle;
 
 };

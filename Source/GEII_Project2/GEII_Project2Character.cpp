@@ -15,6 +15,7 @@
 #include "UObject/UObjectGlobals.h"
 #include "Net/UnrealNetwork.h"
 #include "Engine/Engine.h"
+#include "Engine/DamageEvents.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -217,8 +218,34 @@ void AGEII_Project2Character::SetCurrentHealth(float healthValue)
 
 float AGEII_Project2Character::TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
-	float damageApplied = CurrentHealth - DamageTaken;
-	SetCurrentHealth(damageApplied);
-	return damageApplied;
+	if (DamageEvent.IsOfType(FPointDamageEvent::ClassID))
+	{
+		const FPointDamageEvent* PointDamageEvent = (FPointDamageEvent*)&DamageEvent;
+
+		// Get the hit location from the damage event
+		FVector HitLocation = PointDamageEvent->HitInfo.ImpactPoint;
+
+		// Check if we hit the head (using a tag or bone name)
+		if (PointDamageEvent->HitInfo.BoneName == "head")
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Orange, TEXT("BOOOOM!!! Headshot!"));
+			float randomHigherDamage = FMath::FRandRange(DamageTaken*2, MaxHealth);
+			float damageApplied = CurrentHealth - randomHigherDamage;
+			SetCurrentHealth(damageApplied);
+		}
+		else 
+		{
+			float damageApplied = CurrentHealth - DamageTaken;
+			SetCurrentHealth(damageApplied);
+			return damageApplied;
+		}
+	}
+	else 
+	{
+		float damageApplied = CurrentHealth - DamageTaken;
+		SetCurrentHealth(damageApplied);
+		return damageApplied;
+	}
+	return CurrentHealth;
 }
 

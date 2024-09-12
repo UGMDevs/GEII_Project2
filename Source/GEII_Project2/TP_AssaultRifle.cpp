@@ -87,8 +87,9 @@ void UTP_AssaultRifle::HandleFire()
 					if (bHit)
 					{
 						GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Green, TEXT("Hit"));
-						UGameplayStatics::ApplyDamage(HitResult.GetActor(), Damage, GetOwner()->GetInstigator()->Controller, this->GetOwner(), DamageType);
-		
+						//UGameplayStatics::ApplyDamage(HitResult.GetActor(), Damage, GetOwner()->GetInstigator()->Controller, this->GetOwner(), DamageType);
+						UGameplayStatics::ApplyPointDamage(HitResult.GetActor(), Damage, CameraLocation, HitResult, GetOwner()->GetInstigatorController(), GetOwner(), DamageType);
+
 						FVector spawnLocation = HitResult.Location;
 						UGameplayStatics::SpawnEmitterAtLocation(
 							this,

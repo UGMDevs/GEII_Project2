@@ -16,61 +16,53 @@ UTP_WeaponComponent::UTP_WeaponComponent()
 {
 	// Default offset from the character location for projectiles to spawn
 	MuzzleOffset = FVector(100.0f, 0.0f, 10.0f);
+
+	// Initialize fire rate
+	FireRate = 0.25f;
+	bIsFiringWeapon = false;
 }
 
 
 void UTP_WeaponComponent::Fire()
 {
-	if (Character == nullptr || Character->GetController() == nullptr)
+	if (!bIsFiringWeapon)
 	{
-		return;
-	}
-
-	if (Character->GetLocalRole() == ROLE_Authority)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Attempting spawning Projectile Server"));
+		bIsFiringWeapon = true;
+		UWorld* World = GetWorld();
+		World->GetTimerManager().SetTimer(FiringTimer, this, &UTP_WeaponComponent::StopFire, FireRate, false);
 		HandleFire();
 	}
-	else 
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Attempting spawning Projectile Client"));
-		Server_Fire();
-	}
 }
 
-void UTP_WeaponComponent::Server_Fire_Implementation()
+void UTP_WeaponComponent::StopFire()
 {
-	HandleFire();
+	bIsFiringWeapon = false;
 }
 
-void UTP_WeaponComponent::HandleFire()
+void UTP_WeaponComponent::HandleFire_Implementation()
 {
-	if (Character->GetLocalRole() == ROLE_Authority)
+	// Try and fire a projectile
+	if (ProjectileClass != nullptr)
 	{
-		// Try and fire a projectile
-		if (ProjectileClass != nullptr)
+		UWorld* const World = GetWorld();
+		if (World != nullptr)
 		{
-			UWorld* const World = GetWorld();
-			if (World != nullptr)
-			{
-				APlayerController* PlayerController = Cast<APlayerController>(Character->GetController());
-				const FRotator SpawnRotation = PlayerController->PlayerCameraManager->GetCameraRotation();
-				// MuzzleOffset is in camera space, so transform it to world space before offsetting from the character location to find the final muzzle position
-				const FVector SpawnLocation = GetOwner()->GetActorLocation() + SpawnRotation.RotateVector(MuzzleOffset);
+			APlayerController* PlayerController = Cast<APlayerController>(Character->GetController());
+			const FRotator SpawnRotation = PlayerController->PlayerCameraManager->GetCameraRotation();
+			// MuzzleOffset is in camera space, so transform it to world space before offsetting from the character location to find the final muzzle position
+			const FVector SpawnLocation = GetOwner()->GetActorLocation() + SpawnRotation.RotateVector(MuzzleOffset);
 
-				//Set Spawn Collision Handling Override
-				FActorSpawnParameters ActorSpawnParams;
-				ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
-				ActorSpawnParams.Owner = Character;
-				ActorSpawnParams.Instigator = Character;
+			//Set Spawn Collision Handling Override
+			FActorSpawnParameters ActorSpawnParams;
+			ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
+			ActorSpawnParams.Owner = Character;
+			ActorSpawnParams.Instigator = Character;
 
-				// Spawn the projectile at the muzzle
-				UE_LOG(LogTemp, Warning, TEXT("Spawning Projectile"));
-				World->SpawnActor<AGEII_Project2Projectile>(ProjectileClass, SpawnLocation, SpawnRotation, ActorSpawnParams);
-			}
+			// Spawn the projectile at the muzzle
+			UE_LOG(LogTemp, Warning, TEXT("Spawning Projectile"));
+			World->SpawnActor<AGEII_Project2Projectile>(ProjectileClass, SpawnLocation, SpawnRotation, ActorSpawnParams);
 		}
 	}
-
 	// Try and play the sound if specified
 	if (FireSound != nullptr)
 	{
