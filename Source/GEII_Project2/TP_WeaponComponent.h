@@ -53,7 +53,7 @@ public:
 	void Server_Fire();
 
 	UFUNCTION()
-	void HandleFire();
+	virtual void HandleFire();
 
 
 
@@ -62,7 +62,6 @@ protected:
 	UFUNCTION()
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
-private:
 	/** The Character holding this weapon*/
 	AGEII_Project2Character* Character;
 };

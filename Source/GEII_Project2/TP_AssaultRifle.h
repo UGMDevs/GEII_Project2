@@ -12,4 +12,18 @@ class GEII_PROJECT2_API UTP_AssaultRifle : public UTP_WeaponComponent
 {
 	GENERATED_BODY()
 	
+public:
+	UTP_AssaultRifle();
+
+	virtual void HandleFire() override;
+
+protected:
+	UPROPERTY(EditAnywhere, Category = "Effects")
+	class UParticleSystem* ExplosionEffect;
+	//The damage type and damage that will be done by this projectile
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Damage")
+	TSubclassOf<class UDamageType> DamageType;
+	//The damage dealt by this projectile.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Damage")
+	float Damage;
 };

@@ -95,11 +95,17 @@ public:
 
 	// New Code
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
-	UAC_Inventory* InventoryComponent;
+// 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
+// 	UAC_Inventory* InventoryComponent;
+// 
+// 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
+//     UTP_WeaponComponent* StartingWeaponComponent; // Reference to the weapon component */
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
-    UTP_WeaponComponent* StartingWeaponComponent; // Reference to the weapon component */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
+	TArray<TSubclassOf<UTP_WeaponComponent>> WeaponsInventory;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Weapon")
+	UTP_WeaponComponent* CurrentWeaponComponent;
 
 	// ---- Begin Change Character Color ---- //
 
