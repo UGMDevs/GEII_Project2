@@ -80,10 +80,7 @@ void UTP_WeaponComponent::VerifyAmmo()
 	}
 }
 
-void UTP_WeaponComponent::ServerFire_Implementation()
-{
-	Fire();
-}
+
 
 void UTP_WeaponComponent::StopFire()
 {
