@@ -10,10 +10,13 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 #include "Engine/LocalPlayer.h"
-#include "Net/UnrealNetwork.h"
 #include "TP_WeaponComponent.h"
 #include "Engine/World.h"
 #include "UObject/UObjectGlobals.h"
+#include "Net/UnrealNetwork.h"
+#include "Engine/Engine.h"
+#include "Engine/DamageEvents.h"
+
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -44,6 +47,25 @@ AGEII_Project2Character::AGEII_Project2Character()
 	Mesh1P->SetRelativeLocation(FVector(-30.f, 0.f, -150.f));
 
 	bReplicates = true;
+
+	// Initialize the player's Health
+	MaxHealth = 100.0f;
+	CurrentHealth =	MaxHealth;
+	
+	CurrentWeaponComponent = CreateDefaultSubobject<UTP_WeaponComponent>(TEXT("StartingWeaponComponent"));
+	CurrentWeaponComponent->SetupAttachment(GetMesh1P());
+	CurrentWeaponComponent->bOnlyOwnerSee = true;
+	CurrentWeaponComponent->bOwnerNoSee = false;
+
+	ThirdPersonCurrentWeapon = CreateDefaultSubobject<USkeletalMeshComponent>("ThirdPersonWeapon");
+	ThirdPersonCurrentWeapon->SetupAttachment(GetMesh());
+	ThirdPersonCurrentWeapon->SetIsReplicated(true);
+	ThirdPersonCurrentWeapon->bOnlyOwnerSee = false;
+	ThirdPersonCurrentWeapon->bOwnerNoSee = true;
+	ThirdPersonCurrentWeapon->SetRelativeLocation(FVector( -6.f, 3.3f, -1.f));
+	ThirdPersonCurrentWeapon->SetRelativeRotation(FRotator(9.f, 160.f, -11.f));
+	FAttachmentTransformRules AttachmentRules(EAttachmentRule::SnapToTarget, true);
+	ThirdPersonCurrentWeapon->AttachToComponent(GetMesh(), AttachmentRules, FName(TEXT("middle_01_r")));
 }
 
 void AGEII_Project2Character::BeginPlay()
@@ -59,7 +81,6 @@ void AGEII_Project2Character::BeginPlay()
 			Subsystem->AddMappingContext(DefaultMappingContext, 0);
 		}
 	}
-
 }
 
 //////////////////////////////////////////////////////////////////////////// Input
@@ -78,6 +99,10 @@ void AGEII_Project2Character::SetupPlayerInputComponent(UInputComponent* PlayerI
 
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AGEII_Project2Character::Look);
+
+		// Bind SwitchWeapon input
+		EnhancedInputComponent->BindAction(SwitchWeaponNextAction, ETriggerEvent::Started, this, &AGEII_Project2Character::SwitchWeaponNext);
+		EnhancedInputComponent->BindAction(SwitchWeaponPreviousAction, ETriggerEvent::Started, this, &AGEII_Project2Character::SwitchWeaponPrevious);
 	}
 	else
 	{
@@ -115,6 +140,13 @@ void AGEII_Project2Character::Look(const FInputActionValue& Value)
 void AGEII_Project2Character::SetHasRifle(bool bNewHasRifle)
 {
 	bHasRifle = bNewHasRifle;
+	if(!bHasRifle)
+	{
+		if(CurrentWeaponComponent)
+		{
+			CurrentWeaponComponent->DestroyComponent();
+		}
+	}
 }
 
 bool AGEII_Project2Character::GetHasRifle()
@@ -128,8 +160,286 @@ void AGEII_Project2Character::GetLifetimeReplicatedProps(TArray<FLifetimePropert
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	// Replicate Character Color
+	// Replicate character color
 	DOREPLIFETIME(AGEII_Project2Character, CharacterColor);
+	// Replicate current health
+	DOREPLIFETIME(AGEII_Project2Character, CurrentHealth);
+	// Replicate current weapon
+	DOREPLIFETIME(AGEII_Project2Character, CurrentWeaponComponent);
+	// Replicate has Rifle
+	DOREPLIFETIME(AGEII_Project2Character, bHasRifle);
+	// Replicate the index
+	DOREPLIFETIME(AGEII_Project2Character, CurrentIndex);
+}
+
+/////////////////////////////// ATTACHING AND SELECTING WEAPON LOGIC /////////////////////////////////////////////////
+
+void AGEII_Project2Character::AddWeapon(TSubclassOf<UTP_WeaponComponent> NewWeapon)
+{
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		SetHasRifle(false);
+		CurrentWeaponComponent = NewObject<UTP_WeaponComponent>(this, NewWeapon);
+		CurrentIndex = WeaponsInventory.AddUnique(CurrentWeaponComponent->GetClass());
+		AttachCurrentWeapon();
+		OnRep_CurrentWeaponComponent();
+	}
+}
+
+void AGEII_Project2Character::AttachCurrentWeapon()
+{
+	if (CurrentWeaponComponent)
+	{
+		// Server-side logic
+		if (GetLocalRole() == ROLE_Authority)
+		{
+			CurrentWeaponComponent->AttachWeapon(this);
+			CurrentWeaponComponent->SetOnlyOwnerSee(true);
+			CurrentWeaponComponent->SetOwnerNoSee(false);
+			
+			ThirdPersonCurrentWeapon->SetSkeletalMesh(CurrentWeaponComponent->GetSkeletalMeshAsset());
+			ThirdPersonCurrentWeapon->SetOnlyOwnerSee(false);
+			ThirdPersonCurrentWeapon->SetOwnerNoSee(true);
+		}
+		// Client-side logic
+		else
+		{
+			CurrentWeaponComponent->AttachWeapon(this);
+			CurrentWeaponComponent->SetOnlyOwnerSee(true);
+			CurrentWeaponComponent->SetOwnerNoSee(false);
+
+			ThirdPersonCurrentWeapon->SetSkeletalMesh(CurrentWeaponComponent->GetSkeletalMeshAsset());
+			ThirdPersonCurrentWeapon->SetOnlyOwnerSee(false);
+			ThirdPersonCurrentWeapon->SetOwnerNoSee(true);
+		}
+	}
+}
+
+/// SWITCH WEAPON LOGIC ////
+
+void AGEII_Project2Character::SwitchWeapon(bool bNext)
+{
+	if (HasAuthority())
+	{
+		// Server logic
+		if (bNext)
+		{
+			SetHasRifle(false);
+			Server_SelectWeapon();
+		}
+		else
+		{
+			SetHasRifle(false);
+			Server_SelectPreviousWeapon();
+		}
+	}
+	else
+	{
+		// Client logic
+		if (bNext)
+		{
+			SetHasRifle(false);
+			Server_SelectWeapon();
+		}
+		else
+		{
+			SetHasRifle(false);
+			Server_SelectPreviousWeapon();
+		}
+	}
+}
+
+void AGEII_Project2Character::SwitchWeaponNext()
+{
+	UE_LOG(LogTemp, Log, TEXT("Switching to next weapon."));
+	SwitchWeapon(true);
+}
+
+void AGEII_Project2Character::SwitchWeaponPrevious()
+{
+	UE_LOG(LogTemp, Log, TEXT("Switching to previous weapon."));
+	SwitchWeapon(false);
+}
+
+void AGEII_Project2Character::Server_SelectPreviousWeapon_Implementation()
+{
+	// Ensure the server logic for weapon switching
+	int32 InventoryLength = WeaponsInventory.Num();
+
+	if (InventoryLength > 0)
+	{
+		// Cycle through the inventory backward
+		if (CurrentIndex <= 0)
+		{
+			CurrentIndex = InventoryLength - 1; // Go to the last weapon if we are at the beginning
+		}
+		else
+		{
+			CurrentIndex = FMath::Clamp(CurrentIndex - 1, 0, InventoryLength - 1);
+		}
+
+		// Fetch the weapon class from the inventory
+		TSubclassOf<UTP_WeaponComponent> WeaponClass = WeaponsInventory[CurrentIndex];
+
+		if (WeaponClass != nullptr)
+		{
+			// Create the new weapon component
+			UTP_WeaponComponent* NewWeaponComponent = NewObject<UTP_WeaponComponent>(this, WeaponClass);
+			if (NewWeaponComponent)
+			{
+				// Register and replicate the new weapon component
+				NewWeaponComponent->RegisterComponent();
+
+				// Destroy the old weapon component
+				if (CurrentWeaponComponent)
+				{
+					CurrentWeaponComponent->DestroyComponent();
+				}
+
+				// Set the new weapon component and attach it
+				CurrentWeaponComponent = NewWeaponComponent;
+				CurrentWeaponComponent->AttachWeapon(this);
+
+				// Replicate the new weapon component
+				OnRep_CurrentWeaponComponent();
+			}
+		}
+	}
+}
+
+
+
+void AGEII_Project2Character::AttachServerWeapon()
+{
+	if (CurrentWeaponComponent)
+	{
+		// Attach the weapon using its own method, which will handle both logic and animation switching
+		CurrentWeaponComponent->AttachWeapon(this);
+	}
+}
+
+void AGEII_Project2Character::Server_SelectWeapon_Implementation()
+{
+	// Inventory Length
+	int32 InventoryLength = WeaponsInventory.Num();
+
+	if (InventoryLength > 0)
+	{
+		// Cycle through the inventory
+		if (CurrentIndex >= InventoryLength - 1)
+		{
+			CurrentIndex = 0; // Goes back to the first weapon if we are at the end
+		}
+		else
+		{
+			CurrentIndex = FMath::Clamp(CurrentIndex + 1, 0, InventoryLength - 1);
+		}
+
+		// Fetches the weapon class from the inventory
+		TSubclassOf<UTP_WeaponComponent> WeaponClass = WeaponsInventory[CurrentIndex];
+
+		if (WeaponClass != nullptr)
+		{
+			// Creates a new weapon component with the pickup class
+			UTP_WeaponComponent* NewWeaponComponent = NewObject<UTP_WeaponComponent>(this, WeaponClass);
+			if (NewWeaponComponent)
+			{
+				// Registers and replicates the new weapon component
+				NewWeaponComponent->RegisterComponent();
+
+				if (CurrentWeaponComponent)
+				{
+					CurrentWeaponComponent->DestroyComponent();
+				}
+
+				// Setting of the new weapon component and attaching it
+				CurrentWeaponComponent = NewWeaponComponent;
+				CurrentWeaponComponent->AttachWeapon(this);
+
+				// Replicate the new weapon component
+				OnRep_CurrentWeaponComponent();
+			}
+		}
+	}
+}
+
+void AGEII_Project2Character::OnRep_CurrentWeaponComponent()
+{
+	if (CurrentWeaponComponent)
+	{
+		CurrentWeaponComponent->AttachWeapon(this);
+	}
+}
+
+
+
+bool AGEII_Project2Character::Server_SelectWeapon_Validate()
+{
+	return true;
+}
+
+bool AGEII_Project2Character::Server_SelectPreviousWeapon_Validate()
+{
+	return true;
+}
+
+
+
+/////////////////////////////// END SWITCH WEAPON LOGIC //////////////////////////////////////////
+
+
+
+/////////////////////////////// CHARACTER COLOR + HEALTH CHANGE //////////////////////////////////////////
+
+void AGEII_Project2Character::OnRep_CharacterColor()
+{
+	OnCharacterColorChange(CharacterColor);
+}
+
+
+void AGEII_Project2Character::Server_ChangeColor_Implementation(FLinearColor NewColor)
+{
+	// Change Color with authority
+	ChangeColor(NewColor);
+}
+
+void AGEII_Project2Character::OnRep_CurrentHealth()
+{
+	OnHealthUpdate();
+}
+
+void AGEII_Project2Character::OnHealthUpdate()
+{
+	// Client-specific functionality
+	if (IsLocallyControlled())
+	{
+		FString healthMessage = FString::Printf(TEXT("You now have %f health remaining."), CurrentHealth);
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, healthMessage);
+		if (CurrentHealth <= 0)
+		{
+			FString deathMessage = FString::Printf(TEXT("You have been killed."));
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, deathMessage);
+		}
+	}
+	//Server-specific functionality
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		FString healthMessage = FString::Printf(TEXT("%s now has %f health remaining."), *GetFName().ToString(), CurrentHealth);
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, healthMessage);
+	}
+	//Functions that occur on all machines.
+	/*
+	Any special functionality that should occur as a result of damage or death should be placed here.
+	*/
+}
+
+void AGEII_Project2Character::SetCurrentHealth(float healthValue)
+{
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		CurrentHealth = FMath::Clamp(healthValue, 0.f, MaxHealth);
+		OnHealthUpdate();
+	}
 }
 
 void AGEII_Project2Character::ChangeColor(FLinearColor NewColor)
@@ -147,13 +457,37 @@ void AGEII_Project2Character::ChangeColor(FLinearColor NewColor)
 	}
 }
 
-void AGEII_Project2Character::OnRep_CharacterColor()
+float AGEII_Project2Character::TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
-	OnCharacterColorChange(CharacterColor);
+	if (DamageEvent.IsOfType(FPointDamageEvent::ClassID))
+	{
+		const FPointDamageEvent* PointDamageEvent = (FPointDamageEvent*)&DamageEvent;
+
+		// Get the hit location from the damage event
+		FVector HitLocation = PointDamageEvent->HitInfo.ImpactPoint;
+
+		// Check if we hit the head (using a tag or bone name)
+		if (PointDamageEvent->HitInfo.BoneName == "head")
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Orange, TEXT("BOOOOM!!! Headshot!"));
+			float randomHigherDamage = FMath::FRandRange(DamageTaken*2, MaxHealth);
+			float damageApplied = CurrentHealth - randomHigherDamage;
+			SetCurrentHealth(damageApplied);
+		}
+		else 
+		{
+			float damageApplied = CurrentHealth - DamageTaken;
+			SetCurrentHealth(damageApplied);
+			return damageApplied;
+		}
+	}
+	else 
+	{
+		float damageApplied = CurrentHealth - DamageTaken;
+		SetCurrentHealth(damageApplied);
+		return damageApplied;
+	}
+	return CurrentHealth;
 }
 
-void AGEII_Project2Character::Server_ChangeColor_Implementation(FLinearColor NewColor)
-{
-	// Change Color with authority
-	ChangeColor(NewColor);
-}
+/////////////////////////////// END CHARACTER COLOR + HEALTH CHANGE //////////////////////////////////////////

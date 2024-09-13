@@ -6,7 +6,9 @@
 #include "GameFramework/Character.h"
 #include "Logging/LogMacros.h"
 #include "TP_WeaponComponent.h"
+#include "AC_Inventory.h"
 #include "GEII_Project2Character.generated.h"
+
 
 class UInputComponent;
 class USkeletalMeshComponent;
@@ -42,6 +44,14 @@ class AGEII_Project2Character : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* MoveAction;
 
+	/** Weapon Selection Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* SwitchWeaponNextAction;
+		
+	/** Weapon Selection Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* SwitchWeaponPreviousAction;
+
 public:
 	AGEII_Project2Character();
 
@@ -55,7 +65,7 @@ public:
 	class UInputAction* LookAction;
 
 	/** Bool for AnimBP to switch to another animation set */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Weapon)
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadOnly, Category = Weapon)
 	bool bHasRifle;
 
 	/** Setter to set the bool */
@@ -78,6 +88,7 @@ protected:
 	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
 	// End of APawn interface
 
+
 public:
 	/** Returns Mesh1P subobject **/
 	USkeletalMeshComponent* GetMesh1P() const { return Mesh1P; }
@@ -92,6 +103,47 @@ public:
 	void ChangeColor(FLinearColor NewColor);
 
 	// New Code
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
+	TArray<TSubclassOf<UTP_WeaponComponent>> WeaponsInventory;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Weapon")
+	TArray<int32> WeaponsAmmo;
+
+	UPROPERTY(ReplicatedUsing = OnRep_CurrentWeaponComponent, VisibleAnywhere, BlueprintReadWrite, Category = "Weapon")
+	UTP_WeaponComponent* CurrentWeaponComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Weapon")
+	USkeletalMeshComponent* ThirdPersonCurrentWeapon;
+
+	UFUNCTION()
+	void OnRep_CurrentWeaponComponent();
+
+	UFUNCTION(BlueprintCallable, Category = "Weapon|Inventory")
+	void AddWeapon(TSubclassOf<UTP_WeaponComponent> NewWeapon);
+
+	UFUNCTION(BlueprintCallable, Category = "Weapon|Inventory")
+	void AttachCurrentWeapon();
+
+	// The function clients will call to switch weapons
+    UFUNCTION(BlueprintCallable, Category = "Weapon")
+    void SwitchWeapon(bool bNext);
+
+	// 
+    UFUNCTION(BlueprintCallable, Category = "Weapon")
+	void SwitchWeaponNext();
+
+	// 
+    UFUNCTION(BlueprintCallable, Category = "Weapon")
+	void SwitchWeaponPrevious();
+
+
+
+protected:
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Weapon|Inventory");
+	int32 CurrentIndex;
+
+	// ---- Begin Change Character Color ---- //
 
 protected:
 	/** Character's current color */
@@ -109,4 +161,56 @@ protected:
 	/** Server function for changing color */
 	UFUNCTION(Server, Reliable)
 	void Server_ChangeColor(FLinearColor NewColor);
+
+	// This function runs on the server
+    UFUNCTION(Server, Reliable, WithValidation)
+    void Server_SelectWeapon();
+
+	// The function clients will call to switch weapons
+    UFUNCTION(Server, Reliable, WithValidation)
+   	void Server_SelectPreviousWeapon();
+
+    // Attach the weapon on both server and client
+    void AttachServerWeapon();
+
+	bool Server_SelectWeapon_Validate();
+
+	bool Server_SelectPreviousWeapon_Validate();
+
+	// ---- End Change Character Color ---- //
+
+
+	// ---- Begin Health System ---- //
+protected:
+	/** The player's maximum health. This is the highest value of their health can be.
+	This value is a value of the player's health, which starts at when spawned.*/
+	UPROPERTY(EditDefaultsOnly, Category = "Health")
+	float MaxHealth;
+	/** The player's current health. When reduced to 0, they are considered dead.*/
+	UPROPERTY(ReplicatedUsing = OnRep_CurrentHealth)
+	float CurrentHealth;
+	/** RepNotify for changes made to current health.*/
+	UFUNCTION()
+	void OnRep_CurrentHealth();
+
+	/** Response to health being updated. Called on the server immediately after modification, and on clients in response to a RepNotify*/
+	void OnHealthUpdate();
+
+	public:
+	/** Getter for Max Health.*/
+	UFUNCTION(BlueprintPure, Category = "Health")
+	FORCEINLINE float GetMaxHealth() const { return MaxHealth; }
+	/** Getter for Current Health.*/
+	UFUNCTION(BlueprintPure, Category = "Health")
+	FORCEINLINE float GetCurrentHealth() const { return CurrentHealth; }
+	/** Setter for Current Health. Clamps the value between 0 and MaxHealth and calls
+	OnHealthUpdate. Should only be called on the server.*/
+	UFUNCTION(BlueprintCallable, Category = "Health")
+	void SetCurrentHealth(float healthValue);
+	/** Event for taking damage. Overridden from APawn.*/
+	UFUNCTION(BlueprintCallable, Category = "Health")
+	float TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
+
+	// ---- End Health System ---- //
+		
 };

@@ -21,6 +21,10 @@ public:
 	/** Sound to play each time we fire */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Gameplay)
 	USoundBase* FireSound;
+
+	/** Sound to play each time we fire */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Gameplay)
+	USoundBase* NoAmmoSound;
 	
 	/** AnimMontage to play each time we fire */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
@@ -38,6 +42,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
 	class UInputAction* FireAction;
 
+	/** Look Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* Reload;
+
 	/** Sets default values for this component's properties */
 	UTP_WeaponComponent();
 
@@ -46,21 +54,68 @@ public:
 	void AttachWeapon(AGEII_Project2Character* TargetCharacter);
 
 	/** Make the weapon Fire a Projectile */
-	UFUNCTION(BlueprintCallable, Category="Weapon")
+	UFUNCTION(BlueprintCallable, Category="Weapon|WeaponFire")
 	void Fire();
 
 	UFUNCTION(Server, Reliable)
 	void Server_Fire();
 
 	UFUNCTION()
-	void HandleFire();
+	void VerifyAmmo();
+
+	UFUNCTION(Server, Reliable)
+	void Server_Reload();
+
+	/** Function to reload the weapon */
+	UFUNCTION()
+	virtual void ReloadWeapon();
+
+	/** Function for ending weapon fire. Once this is called, the player can use
+	StartFire again.*/
+	UFUNCTION(BlueprintCallable, Category = "Weapon|WeaponFire")
+	void StopFire();
+
+	UFUNCTION(Server, Reliable)
+	virtual void HandleFire();
+
+protected:
+	/** Delay between shots in seconds. Used to control fire rate for your test
+	projectile, but also to prevent an overflow of server functions from binding
+	SpawnProjectile directly to input.*/
+	UPROPERTY(EditDefaultsOnly, Category = "Weapon|WeaponFire")
+	float FireRate;
+
+	/** If true, you are in the process of firing projectiles. */
+	bool bIsFiringWeapon;
+
+	/** A timer handle used for providing the fire rate delay in-between spawns.*/
+	FTimerHandle FiringTimer;
+
+public:
+	
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Weapon|Ammo")
+	int MaxTotalAmmo;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Weapon|Ammo")
+	int MaxClipAmmo;
+
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Weapon|Ammo")
+	int TotalAmmo;
+
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Weapon|Ammo")
+	int ClipAmmo;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Weapon|Ammo")
+	float ReloadTime;
 
 protected:
 	/** Ends gameplay for this component. */
 	UFUNCTION()
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
-private:
 	/** The Character holding this weapon*/
 	AGEII_Project2Character* Character;
 };
