@@ -25,6 +25,8 @@ public:
 	UTP_PickUpComponent();
 protected:
 
+	FTimerHandle ActivationTimer;
+
 	/** Called when the game starts */
 	virtual void BeginPlay() override;
 

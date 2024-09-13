@@ -65,6 +65,7 @@ void UTP_AssaultRifle::HandleFire()
 						AnimInstance->Montage_Play(FireAnimation, 1.f);
 					}
 				}
+
 				for( int32 i = 0; i< NumberOfFiringBullets; i++)
 				{
 					// Generate random yaw and pitch variation within the spread angle

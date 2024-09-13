@@ -54,7 +54,18 @@ AGEII_Project2Character::AGEII_Project2Character()
 	
 	CurrentWeaponComponent = CreateDefaultSubobject<UTP_WeaponComponent>(TEXT("StartingWeaponComponent"));
 	CurrentWeaponComponent->SetupAttachment(GetMesh1P());
+	CurrentWeaponComponent->bOnlyOwnerSee = true;
+	CurrentWeaponComponent->bOwnerNoSee = false;
 
+	ThirdPersonCurrentWeapon = CreateDefaultSubobject<USkeletalMeshComponent>("ThirdPersonWeapon");
+	ThirdPersonCurrentWeapon->SetupAttachment(GetMesh());
+	ThirdPersonCurrentWeapon->SetIsReplicated(true);
+	ThirdPersonCurrentWeapon->bOnlyOwnerSee = false;
+	ThirdPersonCurrentWeapon->bOwnerNoSee = true;
+	ThirdPersonCurrentWeapon->SetRelativeLocation(FVector( -6.f, 3.3f, -1.f));
+	ThirdPersonCurrentWeapon->SetRelativeRotation(FRotator(9.f, 160.f, -11.f));
+	FAttachmentTransformRules AttachmentRules(EAttachmentRule::SnapToTarget, true);
+	ThirdPersonCurrentWeapon->AttachToComponent(GetMesh(), AttachmentRules, FName(TEXT("middle_01_r")));
 }
 
 void AGEII_Project2Character::BeginPlay()
@@ -149,6 +160,10 @@ void AGEII_Project2Character::GetLifetimeReplicatedProps(TArray<FLifetimePropert
 	DOREPLIFETIME(AGEII_Project2Character, CharacterColor);
 	// Replicate current health
 	DOREPLIFETIME(AGEII_Project2Character, CurrentHealth);
+	// Replicate current weapon
+	DOREPLIFETIME(AGEII_Project2Character, CurrentWeaponComponent);
+	// Replicate has Rifle
+	DOREPLIFETIME(AGEII_Project2Character, bHasRifle);
 }
 
 void AGEII_Project2Character::ChangeColor(FLinearColor NewColor)
@@ -163,6 +178,52 @@ void AGEII_Project2Character::ChangeColor(FLinearColor NewColor)
 	{
 		// Ask the server to change the color
 		Server_ChangeColor(NewColor);
+	}
+}
+
+void AGEII_Project2Character::OnRep_CurrentWeaponComponent()
+{
+	AttachCurrentWeapon();
+}
+
+void AGEII_Project2Character::AddWeapon(TSubclassOf<UTP_WeaponComponent> NewWeapon)
+{
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		SetHasRifle(false);
+		CurrentWeaponComponent = NewObject<UTP_WeaponComponent>(this, NewWeapon);
+		CurrentIndex = WeaponsInventory.AddUnique(CurrentWeaponComponent->GetClass());
+		AttachCurrentWeapon();
+		OnRep_CurrentWeaponComponent();
+	}
+}
+
+void AGEII_Project2Character::AttachCurrentWeapon()
+{
+	if (CurrentWeaponComponent)
+	{
+		// Server-side logic
+		if (GetLocalRole() == ROLE_Authority)
+		{
+			CurrentWeaponComponent->AttachWeapon(this);
+			CurrentWeaponComponent->SetOnlyOwnerSee(true);
+			CurrentWeaponComponent->SetOwnerNoSee(false);
+
+			ThirdPersonCurrentWeapon->SetSkeletalMesh(CurrentWeaponComponent->GetSkeletalMeshAsset());
+			ThirdPersonCurrentWeapon->SetOnlyOwnerSee(false);
+			ThirdPersonCurrentWeapon->SetOwnerNoSee(true);
+		}
+		// Client-side logic
+		else
+		{
+			CurrentWeaponComponent->AttachWeapon(this);
+			CurrentWeaponComponent->SetOnlyOwnerSee(true);
+			CurrentWeaponComponent->SetOwnerNoSee(false);
+
+			ThirdPersonCurrentWeapon->SetSkeletalMesh(CurrentWeaponComponent->GetSkeletalMeshAsset());
+			ThirdPersonCurrentWeapon->SetOnlyOwnerSee(false);
+			ThirdPersonCurrentWeapon->SetOwnerNoSee(true);
+		}
 	}
 }
 
@@ -199,7 +260,7 @@ void AGEII_Project2Character::OnHealthUpdate()
 	if (GetLocalRole() == ROLE_Authority)
 	{
 		FString healthMessage = FString::Printf(TEXT("%s now has %f health remaining."), *GetFName().ToString(), CurrentHealth);
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, healthMessage);
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, healthMessage);
 	}
 	//Functions that occur on all machines.
 	/*

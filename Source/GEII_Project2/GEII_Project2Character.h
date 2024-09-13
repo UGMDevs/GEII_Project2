@@ -57,7 +57,7 @@ public:
 	class UInputAction* LookAction;
 
 	/** Bool for AnimBP to switch to another animation set */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Weapon)
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadOnly, Category = Weapon)
 	bool bHasRifle;
 
 	/** Setter to set the bool */
@@ -101,11 +101,24 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Weapon")
 	TArray<int32> WeaponsAmmo;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Weapon")
+	UPROPERTY(ReplicatedUsing = OnRep_CurrentWeaponComponent, VisibleAnywhere, BlueprintReadWrite, Category = "Weapon")
 	UTP_WeaponComponent* CurrentWeaponComponent;
 
-	UFUNCTION(BlueprintImplementableEvent, Category = "Weapon")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Weapon")
+	USkeletalMeshComponent* ThirdPersonCurrentWeapon;
+
+	UFUNCTION()
+	void OnRep_CurrentWeaponComponent();
+
+	UFUNCTION(BlueprintCallable, Category = "Weapon|Inventory")
 	void AddWeapon(TSubclassOf<UTP_WeaponComponent> NewWeapon);
+
+	UFUNCTION(BlueprintCallable, Category = "Weapon|Inventory")
+	void AttachCurrentWeapon();
+
+protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Weapon|Inventory");
+	int32 CurrentIndex;
 
 	// ---- Begin Change Character Color ---- //
 
