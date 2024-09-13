@@ -29,27 +29,54 @@ UTP_WeaponComponent::UTP_WeaponComponent()
 	TotalAmmo = 64;
 	ClipAmmo = 12;
 	ReloadTime = 1.0f;
+}
 
+void UTP_WeaponComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(UTP_WeaponComponent, ClipAmmo);
+	DOREPLIFETIME(UTP_WeaponComponent, TotalAmmo);
 }
 
 
 void UTP_WeaponComponent::Fire()
 {
-	if (Character->GetLocalRole() != ROLE_Authority)
+	if(GetOwner()->GetLocalRole() == ROLE_Authority)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Purple, TEXT("Client Shooting"));
-		// Tell the server to handle firing
-		ServerFire();
-		return;
+		if (!bIsFiringWeapon)
+		{
+			bIsFiringWeapon = true;
+			UWorld* World = GetWorld();
+			World->GetTimerManager().SetTimer(FiringTimer, this, &UTP_WeaponComponent::StopFire, FireRate, false);
+			VerifyAmmo();
+		}
 	}
-
-	if (!bIsFiringWeapon)
+	else
 	{
-	GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Purple, TEXT("Server Shooting"));
-		bIsFiringWeapon = true;
-		UWorld* World = GetWorld();
-		World->GetTimerManager().SetTimer(FiringTimer, this, &UTP_WeaponComponent::StopFire, FireRate, false);
-		VerifyAmmo();
+		Server_Fire();
+	}
+}
+
+void UTP_WeaponComponent::Server_Fire_Implementation()
+{
+	Fire();
+}
+
+void UTP_WeaponComponent::VerifyAmmo()
+{
+	if (ClipAmmo > 0)
+	{
+		HandleFire();
+		ClipAmmo--;
+	}
+	else
+	{
+		// Try and play the sound if specified
+		if (NoAmmoSound != nullptr)
+		{
+			UGameplayStatics::PlaySoundAtLocation(this, NoAmmoSound, Character->GetActorLocation());
+		}
 	}
 }
 
@@ -61,74 +88,6 @@ void UTP_WeaponComponent::ServerFire_Implementation()
 void UTP_WeaponComponent::StopFire()
 {
 	bIsFiringWeapon = false;
-}
-
-void UTP_WeaponComponent::VerifyAmmo()
-{
-	if (ClipAmmo > 0)
-	{
-		HandleFire();
-		ClipAmmo -= 1;
-	}
-	else if (ClipAmmo == 0 && TotalAmmo > 0)
-	{
-		// If we want to reload automatically when trying to fire when out of bullets
-		//ReloadWeapon();
-	}
-	else 
-	{
-		// No Ammo
-		// Try and play the sound if specified
-		if (FireSound != nullptr)
-		{
-			UGameplayStatics::PlaySoundAtLocation(this, NoAmmoSound, Character->GetActorLocation());
-		}
-	}
-}
-
-void UTP_WeaponComponent::HandleFire_Implementation()
-{
-	// Try and fire a projectile
-	if (ProjectileClass != nullptr)
-	{
-		UWorld* const World = GetWorld();
-		if (World != nullptr)
-		{
-			APlayerController* PlayerController = Cast<APlayerController>(Character->GetController());
-			const FRotator SpawnRotation = PlayerController->PlayerCameraManager->GetCameraRotation();
-			// MuzzleOffset is in camera space, so transform it to world space before offsetting from the character location to find the final muzzle position
-			const FVector SpawnLocation = GetOwner()->GetActorLocation() + SpawnRotation.RotateVector(MuzzleOffset);
-
-			//Set Spawn Collision Handling Override
-			FActorSpawnParameters ActorSpawnParams;
-			ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
-			ActorSpawnParams.Owner = Character;
-			ActorSpawnParams.Instigator = Character;
-
-			// Spawn the projectile at the muzzle
-			UE_LOG(LogTemp, Warning, TEXT("Spawning Projectile"));
-			World->SpawnActor<AGEII_Project2Projectile>(ProjectileClass, SpawnLocation, SpawnRotation, ActorSpawnParams);
-		}
-		// Try and play the sound if specified
-		if (FireSound != nullptr)
-		{
-			UGameplayStatics::PlaySoundAtLocation(this, FireSound, Character->GetActorLocation());
-		}
-	}
-
-	if (Character->IsLocallyControlled())
-	{
-		// Try and play a firing animation if specified
-		if (FireAnimation != nullptr)
-		{
-			// Get the animation object for the arms mesh
-			UAnimInstance* AnimInstance = Character->GetMesh1P()->GetAnimInstance();
-			if (AnimInstance != nullptr)
-			{
-				AnimInstance->Montage_Play(FireAnimation, 1.f);
-			}
-		}
-	}
 }
 
 void UTP_WeaponComponent::ReloadWeapon()
@@ -166,12 +125,50 @@ void UTP_WeaponComponent::Server_Reload_Implementation()
 	ReloadWeapon();
 }
 
-void UTP_WeaponComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+void UTP_WeaponComponent::HandleFire_Implementation()
 {
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	// Try and fire a projectile
+	if (ProjectileClass != nullptr)
+	{
+		UWorld* const World = GetWorld();
+		if (World != nullptr)
+		{
+			APlayerController* PlayerController = Cast<APlayerController>(Character->GetController());
+			const FRotator SpawnRotation = PlayerController->PlayerCameraManager->GetCameraRotation();
+			// MuzzleOffset is in camera space, so transform it to world space before offsetting from the character location to find the final muzzle position
+			const FVector SpawnLocation = GetOwner()->GetActorLocation() + SpawnRotation.RotateVector(MuzzleOffset);
 
-	DOREPLIFETIME(UTP_WeaponComponent, ClipAmmo);
-	DOREPLIFETIME(UTP_WeaponComponent, TotalAmmo);
+			//Set Spawn Collision Handling Override
+			FActorSpawnParameters ActorSpawnParams;
+			ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
+			ActorSpawnParams.Owner = Character;
+			ActorSpawnParams.Instigator = Character;
+
+			// Spawn the projectile at the muzzle
+			UE_LOG(LogTemp, Warning, TEXT("Spawning Projectile"));
+			World->SpawnActor<AGEII_Project2Projectile>(ProjectileClass, SpawnLocation, SpawnRotation, ActorSpawnParams);
+		}
+	}
+
+	// Try and play the sound if specified
+	if (FireSound != nullptr)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, FireSound, Character->GetActorLocation());
+	}
+
+	if (Character->IsLocallyControlled())
+	{
+		// Try and play a firing animation if specified
+		if (FireAnimation != nullptr)
+		{
+			// Get the animation object for the arms mesh
+			UAnimInstance* AnimInstance = Character->GetMesh1P()->GetAnimInstance();
+			if (AnimInstance != nullptr)
+			{
+				AnimInstance->Montage_Play(FireAnimation, 1.f);
+			}
+		}
+	}
 }
 
 void UTP_WeaponComponent::AttachWeapon(AGEII_Project2Character* TargetCharacter)

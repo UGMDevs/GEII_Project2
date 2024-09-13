@@ -58,7 +58,17 @@ public:
 	void Fire();
 
 	UFUNCTION(Server, Reliable)
-	void ServerFire();
+	void Server_Fire();
+
+	UFUNCTION()
+	void VerifyAmmo();
+
+	UFUNCTION(Server, Reliable)
+	void Server_Reload();
+
+	/** Function to reload the weapon */
+	UFUNCTION()
+	virtual void ReloadWeapon();
 
 	/** Function for ending weapon fire. Once this is called, the player can use
 	StartFire again.*/
@@ -82,16 +92,7 @@ protected:
 	FTimerHandle FiringTimer;
 
 public:
-	UFUNCTION(Server, Reliable)
-	void Server_Reload();
-
-	/** Function to reload the weapon */
-	UFUNCTION()
-	virtual void ReloadWeapon();
-
-	UFUNCTION()
-	virtual void VerifyAmmo();
-
+	
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 protected:
