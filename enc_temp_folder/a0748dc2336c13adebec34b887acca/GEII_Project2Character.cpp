@@ -236,13 +236,11 @@ void AGEII_Project2Character::SwitchWeapon(bool bNext)
 	{
 		if (bNext)
 		{
-			SetHasRifle(false);
 			// Call the server function to select the next weapon
 			Server_SelectWeapon();
 		}
 		else
 		{
-			SetHasRifle(false);
 			// Call the server function to select the previous weapon
 			Server_SelectPreviousWeapon();
 		}

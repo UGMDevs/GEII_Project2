@@ -44,6 +44,14 @@ class AGEII_Project2Character : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* MoveAction;
 
+	/** Weapon Selection Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* SwitchWeaponNextAction;
+		
+	/** Weapon Selection Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* SwitchWeaponPreviousAction;
+
 public:
 	AGEII_Project2Character();
 
@@ -119,7 +127,17 @@ public:
 
 	// The function clients will call to switch weapons
     UFUNCTION(BlueprintCallable, Category = "Weapon")
-    void SwitchWeapon();
+    void SwitchWeapon(bool bNext);
+
+	// 
+    UFUNCTION(BlueprintCallable, Category = "Weapon")
+	void SwitchWeaponNext();
+
+	// 
+    UFUNCTION(BlueprintCallable, Category = "Weapon")
+	void SwitchWeaponPrevious();
+
+
 
 protected:
 	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Weapon|Inventory");
@@ -148,10 +166,16 @@ protected:
     UFUNCTION(Server, Reliable, WithValidation)
     void Server_SelectWeapon();
 
+	// The function clients will call to switch weapons
+    UFUNCTION(Server, Reliable, WithValidation)
+   	void Server_SelectPreviousWeapon();
+
     // Attach the weapon on both server and client
     void AttachServerWeapon();
 
 	bool Server_SelectWeapon_Validate();
+
+	bool Server_SelectPreviousWeapon_Validate();
 
 	// ---- End Change Character Color ---- //
 
