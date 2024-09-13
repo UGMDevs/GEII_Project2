@@ -80,6 +80,7 @@ protected:
 	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
 	// End of APawn interface
 
+
 public:
 	/** Returns Mesh1P subobject **/
 	USkeletalMeshComponent* GetMesh1P() const { return Mesh1P; }
@@ -116,8 +117,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Weapon|Inventory")
 	void AttachCurrentWeapon();
 
+	// The function clients will call to switch weapons
+    UFUNCTION(BlueprintCallable, Category = "Weapon")
+    void SwitchWeapon();
+
 protected:
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Weapon|Inventory");
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Weapon|Inventory");
 	int32 CurrentIndex;
 
 	// ---- Begin Change Character Color ---- //
@@ -139,6 +144,15 @@ protected:
 	UFUNCTION(Server, Reliable)
 	void Server_ChangeColor(FLinearColor NewColor);
 
+	// This function runs on the server
+    UFUNCTION(Server, Reliable, WithValidation)
+    void Server_SelectWeapon();
+
+    // Attach the weapon on both server and client
+    void AttachServerWeapon();
+
+	bool Server_SelectWeapon_Validate();
+
 	// ---- End Change Character Color ---- //
 
 
@@ -158,7 +172,7 @@ protected:
 	/** Response to health being updated. Called on the server immediately after modification, and on clients in response to a RepNotify*/
 	void OnHealthUpdate();
 
-public:
+	public:
 	/** Getter for Max Health.*/
 	UFUNCTION(BlueprintPure, Category = "Health")
 	FORCEINLINE float GetMaxHealth() const { return MaxHealth; }
@@ -174,4 +188,5 @@ public:
 	float TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
 	// ---- End Health System ---- //
+		
 };

@@ -164,6 +164,9 @@ void AGEII_Project2Character::GetLifetimeReplicatedProps(TArray<FLifetimePropert
 	DOREPLIFETIME(AGEII_Project2Character, CurrentWeaponComponent);
 	// Replicate has Rifle
 	DOREPLIFETIME(AGEII_Project2Character, bHasRifle);
+
+	// Replicate the current weapon component and the index
+	DOREPLIFETIME(AGEII_Project2Character, CurrentIndex);
 }
 
 void AGEII_Project2Character::ChangeColor(FLinearColor NewColor)
@@ -181,10 +184,6 @@ void AGEII_Project2Character::ChangeColor(FLinearColor NewColor)
 	}
 }
 
-void AGEII_Project2Character::OnRep_CurrentWeaponComponent()
-{
-	AttachCurrentWeapon();
-}
 
 void AGEII_Project2Character::AddWeapon(TSubclassOf<UTP_WeaponComponent> NewWeapon)
 {
@@ -227,10 +226,96 @@ void AGEII_Project2Character::AttachCurrentWeapon()
 	}
 }
 
+void AGEII_Project2Character::SwitchWeapon()
+{
+	if (HasAuthority())
+	{
+		// Call directly on the server if we have authority
+		Server_SelectWeapon();
+	}
+	
+}
+
 void AGEII_Project2Character::OnRep_CharacterColor()
 {
 	OnCharacterColorChange(CharacterColor);
 }
+
+void AGEII_Project2Character::AttachServerWeapon()
+{
+	if (CurrentWeaponComponent)
+	{
+		// Attach the weapon using its own method, which will handle both logic and animation switching
+		CurrentWeaponComponent->AttachWeapon(this);
+	}
+}
+
+void AGEII_Project2Character::Server_SelectWeapon_Implementation()
+{
+	// Ensure the server logic for weapon switching
+	int32 InventoryLength = WeaponsInventory.Num();
+
+	if (InventoryLength > 0)
+	{
+		// Cycle through the inventory
+		if (CurrentIndex >= InventoryLength - 1)
+		{
+			CurrentIndex = 0; // Go back to the first weapon if we are at the end
+		}
+		else
+		{
+			CurrentIndex = FMath::Clamp(CurrentIndex + 1, 0, InventoryLength - 1);
+		}
+
+		// Fetch the weapon class from the inventory
+		TSubclassOf<UTP_WeaponComponent> WeaponClass = WeaponsInventory[CurrentIndex];
+
+		if (WeaponClass != nullptr)
+		{
+			// Create the new weapon component
+			UTP_WeaponComponent* NewWeaponComponent = NewObject<UTP_WeaponComponent>(this, WeaponClass);
+			if (NewWeaponComponent)
+			{
+				// Register and replicate the new weapon component
+				NewWeaponComponent->RegisterComponent();
+
+				// Destroy the old weapon component
+				if (CurrentWeaponComponent)
+				{
+					CurrentWeaponComponent->DestroyComponent();
+				}
+
+				// Set the new weapon component and attach it
+				CurrentWeaponComponent = NewWeaponComponent;
+				CurrentWeaponComponent->AttachWeapon(this);
+
+				// Replicate the new weapon component
+				OnRep_CurrentWeaponComponent();
+			}
+		}
+	}
+}
+
+void AGEII_Project2Character::OnRep_CurrentWeaponComponent()
+{
+	if (CurrentWeaponComponent)
+	{
+		CurrentWeaponComponent->AttachWeapon(this);
+	}
+}
+
+
+
+bool AGEII_Project2Character::Server_SelectWeapon_Validate()
+{
+    // Validation logic here (e.g., ensure the weapon switch is valid)
+    // For now, always return true if you have no special validation:
+    return true;
+}
+
+
+
+
 
 void AGEII_Project2Character::Server_ChangeColor_Implementation(FLinearColor NewColor)
 {
