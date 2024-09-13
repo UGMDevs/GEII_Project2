@@ -196,7 +196,7 @@ void AGEII_Project2Character::AttachCurrentWeapon()
 			CurrentWeaponComponent->AttachWeapon(this);
 			CurrentWeaponComponent->SetOnlyOwnerSee(true);
 			CurrentWeaponComponent->SetOwnerNoSee(false);
-
+			
 			ThirdPersonCurrentWeapon->SetSkeletalMesh(CurrentWeaponComponent->GetSkeletalMeshAsset());
 			ThirdPersonCurrentWeapon->SetOnlyOwnerSee(false);
 			ThirdPersonCurrentWeapon->SetOwnerNoSee(true);
