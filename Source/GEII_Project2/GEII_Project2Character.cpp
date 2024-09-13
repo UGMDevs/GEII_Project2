@@ -168,26 +168,11 @@ void AGEII_Project2Character::GetLifetimeReplicatedProps(TArray<FLifetimePropert
 	DOREPLIFETIME(AGEII_Project2Character, CurrentWeaponComponent);
 	// Replicate has Rifle
 	DOREPLIFETIME(AGEII_Project2Character, bHasRifle);
-
-	// Replicate the current weapon component and the index
+	// Replicate the index
 	DOREPLIFETIME(AGEII_Project2Character, CurrentIndex);
 }
 
-void AGEII_Project2Character::ChangeColor(FLinearColor NewColor)
-{
-	if (GetLocalRole() == ROLE_Authority)
-	{
-		// Change color if it's server
-		CharacterColor = NewColor;
-		OnRep_CharacterColor();
-	}
-	else
-	{
-		// Ask the server to change the color
-		Server_ChangeColor(NewColor);
-	}
-}
-
+/////////////////////////////// ATTACHING AND SELECTING WEAPON LOGIC /////////////////////////////////////////////////
 
 void AGEII_Project2Character::AddWeapon(TSubclassOf<UTP_WeaponComponent> NewWeapon)
 {
@@ -230,20 +215,35 @@ void AGEII_Project2Character::AttachCurrentWeapon()
 	}
 }
 
+/// SWITCH WEAPON LOGIC ////
+
 void AGEII_Project2Character::SwitchWeapon(bool bNext)
 {
 	if (HasAuthority())
 	{
+		// Server logic
 		if (bNext)
 		{
 			SetHasRifle(false);
-			// Call the server function to select the next weapon
 			Server_SelectWeapon();
 		}
 		else
 		{
 			SetHasRifle(false);
-			// Call the server function to select the previous weapon
+			Server_SelectPreviousWeapon();
+		}
+	}
+	else
+	{
+		// Client logic
+		if (bNext)
+		{
+			SetHasRifle(false);
+			Server_SelectWeapon();
+		}
+		else
+		{
+			SetHasRifle(false);
 			Server_SelectPreviousWeapon();
 		}
 	}
@@ -251,11 +251,13 @@ void AGEII_Project2Character::SwitchWeapon(bool bNext)
 
 void AGEII_Project2Character::SwitchWeaponNext()
 {
+	UE_LOG(LogTemp, Log, TEXT("Switching to next weapon."));
 	SwitchWeapon(true);
 }
 
 void AGEII_Project2Character::SwitchWeaponPrevious()
 {
+	UE_LOG(LogTemp, Log, TEXT("Switching to previous weapon."));
 	SwitchWeapon(false);
 }
 
@@ -305,10 +307,7 @@ void AGEII_Project2Character::Server_SelectPreviousWeapon_Implementation()
 	}
 }
 
-void AGEII_Project2Character::OnRep_CharacterColor()
-{
-	OnCharacterColorChange(CharacterColor);
-}
+
 
 void AGEII_Project2Character::AttachServerWeapon()
 {
@@ -321,7 +320,7 @@ void AGEII_Project2Character::AttachServerWeapon()
 
 void AGEII_Project2Character::Server_SelectWeapon_Implementation()
 {
-	// Ensure the server logic for weapon switching
+	// Inventory Length
 	int32 InventoryLength = WeaponsInventory.Num();
 
 	if (InventoryLength > 0)
@@ -329,32 +328,31 @@ void AGEII_Project2Character::Server_SelectWeapon_Implementation()
 		// Cycle through the inventory
 		if (CurrentIndex >= InventoryLength - 1)
 		{
-			CurrentIndex = 0; // Go back to the first weapon if we are at the end
+			CurrentIndex = 0; // Goes back to the first weapon if we are at the end
 		}
 		else
 		{
 			CurrentIndex = FMath::Clamp(CurrentIndex + 1, 0, InventoryLength - 1);
 		}
 
-		// Fetch the weapon class from the inventory
+		// Fetches the weapon class from the inventory
 		TSubclassOf<UTP_WeaponComponent> WeaponClass = WeaponsInventory[CurrentIndex];
 
 		if (WeaponClass != nullptr)
 		{
-			// Create the new weapon component
+			// Creates a new weapon component with the pickup class
 			UTP_WeaponComponent* NewWeaponComponent = NewObject<UTP_WeaponComponent>(this, WeaponClass);
 			if (NewWeaponComponent)
 			{
-				// Register and replicate the new weapon component
+				// Registers and replicates the new weapon component
 				NewWeaponComponent->RegisterComponent();
 
-				// Destroy the old weapon component
 				if (CurrentWeaponComponent)
 				{
 					CurrentWeaponComponent->DestroyComponent();
 				}
 
-				// Set the new weapon component and attach it
+				// Setting of the new weapon component and attaching it
 				CurrentWeaponComponent = NewWeaponComponent;
 				CurrentWeaponComponent->AttachWeapon(this);
 
@@ -377,7 +375,7 @@ void AGEII_Project2Character::OnRep_CurrentWeaponComponent()
 
 bool AGEII_Project2Character::Server_SelectWeapon_Validate()
 {
-    return true;
+	return true;
 }
 
 bool AGEII_Project2Character::Server_SelectPreviousWeapon_Validate()
@@ -387,6 +385,16 @@ bool AGEII_Project2Character::Server_SelectPreviousWeapon_Validate()
 
 
 
+/////////////////////////////// END SWITCH WEAPON LOGIC //////////////////////////////////////////
+
+
+
+/////////////////////////////// CHARACTER COLOR + HEALTH CHANGE //////////////////////////////////////////
+
+void AGEII_Project2Character::OnRep_CharacterColor()
+{
+	OnCharacterColorChange(CharacterColor);
+}
 
 
 void AGEII_Project2Character::Server_ChangeColor_Implementation(FLinearColor NewColor)
@@ -421,8 +429,7 @@ void AGEII_Project2Character::OnHealthUpdate()
 	}
 	//Functions that occur on all machines.
 	/*
-	Any special functionality that should occur as a result of damage or death should
-	be placed here.
+	Any special functionality that should occur as a result of damage or death should be placed here.
 	*/
 }
 
@@ -432,6 +439,21 @@ void AGEII_Project2Character::SetCurrentHealth(float healthValue)
 	{
 		CurrentHealth = FMath::Clamp(healthValue, 0.f, MaxHealth);
 		OnHealthUpdate();
+	}
+}
+
+void AGEII_Project2Character::ChangeColor(FLinearColor NewColor)
+{
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		// Change color if it's server
+		CharacterColor = NewColor;
+		OnRep_CharacterColor();
+	}
+	else
+	{
+		// Ask the server to change the color
+		Server_ChangeColor(NewColor);
 	}
 }
 
@@ -468,3 +490,4 @@ float AGEII_Project2Character::TakeDamage(float DamageTaken, struct FDamageEvent
 	return CurrentHealth;
 }
 
+/////////////////////////////// END CHARACTER COLOR + HEALTH CHANGE //////////////////////////////////////////
