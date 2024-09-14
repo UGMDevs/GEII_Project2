@@ -137,7 +137,16 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Weapon")
 	void SwitchWeaponPrevious();
 
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	void EquipWeaponFromPickup(TSubclassOf<UTP_WeaponComponent> NewWeaponClass);
+		
+    UFUNCTION(Server, Reliable)
+   	void EquipWeaponServer(TSubclassOf<UTP_WeaponComponent> NewWeaponClass);
 
+
+
+    UFUNCTION(Server, Reliable)
+   	void Server_EquipWeapon(TSubclassOf<UTP_WeaponComponent> NewWeaponClass);	
 
 protected:
 	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadWrite, Category = "Weapon|Inventory");

@@ -181,7 +181,7 @@ void AGEII_Project2Character::AddWeapon(TSubclassOf<UTP_WeaponComponent> NewWeap
 		SetHasRifle(false);
 		CurrentWeaponComponent = NewObject<UTP_WeaponComponent>(this, NewWeapon);
 		CurrentIndex = WeaponsInventory.AddUnique(CurrentWeaponComponent->GetClass());
-		AttachCurrentWeapon();
+		EquipWeaponFromPickup(NewWeapon);
 		OnRep_CurrentWeaponComponent();
 	}
 }
@@ -193,7 +193,7 @@ void AGEII_Project2Character::AttachCurrentWeapon()
 		// Server-side logic
 		if (GetLocalRole() == ROLE_Authority)
 		{
-			CurrentWeaponComponent->AttachWeapon(this);
+			
 			CurrentWeaponComponent->SetOnlyOwnerSee(true);
 			CurrentWeaponComponent->SetOwnerNoSee(false);
 			
@@ -204,7 +204,7 @@ void AGEII_Project2Character::AttachCurrentWeapon()
 		// Client-side logic
 		else
 		{
-			CurrentWeaponComponent->AttachWeapon(this);
+			
 			CurrentWeaponComponent->SetOnlyOwnerSee(true);
 			CurrentWeaponComponent->SetOwnerNoSee(false);
 
@@ -358,6 +358,7 @@ void AGEII_Project2Character::Server_SelectWeapon_Implementation()
 
 				// Replicate the new weapon component
 				OnRep_CurrentWeaponComponent();
+				
 			}
 		}
 	}
@@ -367,6 +368,7 @@ void AGEII_Project2Character::OnRep_CurrentWeaponComponent()
 {
 	if (CurrentWeaponComponent)
 	{
+		AttachCurrentWeapon();
 		CurrentWeaponComponent->AttachWeapon(this);
 	}
 }
@@ -382,6 +384,63 @@ bool AGEII_Project2Character::Server_SelectPreviousWeapon_Validate()
 {
 	return true;
 }
+
+
+void AGEII_Project2Character::EquipWeaponFromPickup(TSubclassOf<UTP_WeaponComponent> NewWeaponClass)
+{
+	if (HasAuthority())
+	{
+		// Server logic
+		EquipWeaponServer(NewWeaponClass);
+	}
+	else
+	{
+		// Client logic
+		// Call server function to equip the weapon
+		Server_EquipWeapon(NewWeaponClass);
+	}
+}
+
+void AGEII_Project2Character::Server_EquipWeapon_Implementation(TSubclassOf<UTP_WeaponComponent> NewWeaponClass)
+{
+	EquipWeaponServer(NewWeaponClass);
+	OnRep_CurrentWeaponComponent();
+}
+
+
+
+
+void AGEII_Project2Character::EquipWeaponServer_Implementation(TSubclassOf<UTP_WeaponComponent> NewWeaponClass)
+{
+	if (NewWeaponClass)
+	{
+		// Set the current weapon class from pickup
+		SetHasRifle(false); // Reset the previous weapon
+
+		// Create and attach the new weapon component
+		UTP_WeaponComponent* NewWeaponComponent = NewObject<UTP_WeaponComponent>(this, NewWeaponClass);
+		if (NewWeaponComponent)
+		{
+			NewWeaponComponent->RegisterComponent();
+			NewWeaponComponent->AttachWeapon(this); // Custom function to attach the weapon to the character
+
+			// Clean up the old weapon component if it exists
+			if (CurrentWeaponComponent)
+			{
+				CurrentWeaponComponent->DestroyComponent();
+			}
+
+			// Update the current weapon component
+			CurrentWeaponComponent = NewWeaponComponent;
+			SetHasRifle(true);
+
+			// Notify clients of the weapon change
+			OnRep_CurrentWeaponComponent();
+		}
+	}
+}
+
+
 
 
 

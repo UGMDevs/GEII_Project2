@@ -61,7 +61,7 @@ public:
 	void Server_Fire();
 
 	UFUNCTION()
-	void VerifyAmmo();
+	virtual void VerifyAmmo();
 
 	UFUNCTION(Server, Reliable)
 	void Server_Reload();
@@ -70,13 +70,20 @@ public:
 	UFUNCTION()
 	virtual void ReloadWeapon();
 
+	/** Function increment bullets */
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	virtual void IncrementAmmo();
+
 	/** Function for ending weapon fire. Once this is called, the player can use
 	StartFire again.*/
 	UFUNCTION(BlueprintCallable, Category = "Weapon|WeaponFire")
-	void StopFire();
+	virtual void StopFire();
 
 	UFUNCTION(Server, Reliable)
 	virtual void HandleFire();
+
+	UFUNCTION()
+	virtual void SetupActionBindings(AGEII_Project2Character* Character);
 
 protected:
 	/** Delay between shots in seconds. Used to control fire rate for your test
@@ -108,8 +115,12 @@ protected:
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Weapon|Ammo")
 	int ClipAmmo;
 
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Weapon|Ammo")
+	int BulletsToIncrement;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Weapon|Ammo")
 	float ReloadTime;
+
 
 protected:
 	/** Ends gameplay for this component. */

@@ -20,7 +20,6 @@
 #include "DrawDebugHelpers.h"
 #include "CollisionQueryParams.h"
 #include "Engine/Engine.h"
-#include "GEII_Project2Projectile.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Components/SphereComponent.h"
 
@@ -304,7 +303,6 @@ void APortal::TeleportProjectile(AGEII_Project2Projectile* Projectile)
 	// Calculate the new position and rotation relative to the linked portal
 	FTransform NewTransform = UKismetMathLibrary::ComposeTransforms(RelativeProjectileTransform, LinkedPortal->GetActorTransform());
 
-
 	// Set the new location and rotation for the projectile
 	Projectile->SetActorLocation(NewTransform.GetLocation());
 	Projectile->SetActorRotation(NewTransform.GetRotation().Rotator());
@@ -313,8 +311,11 @@ void APortal::TeleportProjectile(AGEII_Project2Projectile* Projectile)
 	FVector NewVelocity = UKismetMathLibrary::TransformDirection(LinkedPortal->GetActorTransform(), RelativeVelocity);
 	Projectile->GetProjectileMovement()->Velocity = NewVelocity;
 
-	// Set to stop ignoring the portal's current wall
-	Projectile->GetCollisionComp()->IgnoreActorWhenMoving(CurrentWall, false);
+	// Set to stop ignoring the portal's current wall if it's not the same as the linked portal's wall
+	if(CurrentWall != LinkedPortal->CurrentWall)
+	{
+		Projectile->GetCollisionComp()->IgnoreActorWhenMoving(CurrentWall, false);
+	}
 }
 
 void APortal::CheckPlayerCanTeleport(AGEII_Project2Character* Player)
