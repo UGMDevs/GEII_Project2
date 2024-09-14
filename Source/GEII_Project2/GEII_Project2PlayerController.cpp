@@ -40,10 +40,9 @@ void AGEII_Project2PlayerController::RespawnPlayer()
 
 void AGEII_Project2PlayerController::Server_SpawnPlayer_Implementation()
 {
+	AGEII_Project2GameMode* GameMode = Cast<AGEII_Project2GameMode>(GetWorld()->GetAuthGameMode());
 	if (HasAuthority())
 	{
-		AGEII_Project2GameMode* GameMode = Cast<AGEII_Project2GameMode>(GetWorld()->GetAuthGameMode());
-
 		if (GameMode)
 		{
 			GameMode->SpawnPlayer(this);

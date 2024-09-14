@@ -7,9 +7,9 @@
 #include "GameFramework/PlayerStart.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/PlayerController.h"
-#include "GEII_Project2PlayerController.h"
 #include "GameFramework/Actor.h"
 #include "Engine/Engine.h"
+#include "Portal.h"
 #include "GEII_Project2GameMode.generated.h"
 
 UCLASS(minimalapi)
@@ -21,6 +21,8 @@ public:
 	AGEII_Project2GameMode();
 
 // New Code
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 protected:
 	/** All player controllers conrrently connected*/
@@ -66,6 +68,32 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Player Spawning")
 	void SpawnPlayer(APlayerController* PlayerController);
 
+public:	
+	/** Change portal location to a new location*/
+	UFUNCTION(BlueprintCallable, Category = "PortalGun|Portal")
+	void ChangePortalLocation(APortal* PortalToChangeLocation, FVector NewLocation, FRotator NewRotation);
+
+	/** Spawn blue portal*/
+	UFUNCTION(BlueprintCallable, Category = "PortalGun|Portal")
+	void SpawnBluePortal(FHitResult TraceHit);
+
+	/** Spawn orange portal*/
+	UFUNCTION(BlueprintCallable, Category = "PortalGun|Portal")
+	void SpawnOrangePortal(FHitResult TraceHit);
+
+protected:
+	UPROPERTY(VisibleAnywhere, Replicated, Category = "Portal")
+	APortal* SpawnedBluePortal;
+
+	UPROPERTY(VisibleAnywhere, Replicated, Category = "Portal")
+	APortal* SpawnedOrangePortal;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="PortalGun|Portal", meta =(AllowPrivateAccess = "true"))
+	TSubclassOf<class APortal> BluePortal;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="PortalGun|Portal", meta =(AllowPrivateAccess = "true"))
+	TSubclassOf<class APortal> OrangePortal;
+
+	UWorld* World;
 };
 
 

@@ -22,6 +22,8 @@
 #include "Engine/Engine.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Components/SphereComponent.h"
+#include "Net/UnrealNetwork.h"
+#include "GameFramework/Actor.h"
 
 
 // Define custom trace channels
@@ -75,6 +77,16 @@ APortal::APortal()
 
 }
 
+void APortal::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(APortal, LinkedPortal);
+	DOREPLIFETIME(APortal, PortalTransform);
+	DOREPLIFETIME(APortal, LinkedPortalCamera);
+}
+
 // Called when the game starts or when spawned
 void APortal::BeginPlay()
 {
@@ -112,8 +124,7 @@ void APortal::BeginPlay()
 
 		// Set the Render Target 2D to the texture parameter value of the Portal_MAT
 		Portal_MAT->SetTextureParameterValue("Texture", Portal_RT);
-	} 
-
+	}
 	SetupLinkedPortal();
 }
 
@@ -147,26 +158,36 @@ void APortal::SetPortalToLink(APortal* PortalToLink)
 
 void APortal::PlacePortal(FVector NewLocation, FRotator NewRotation)
 {
-	FCollisionShape CollisionSphere = FCollisionShape::MakeSphere(5.f);
-	FCollisionQueryParams QueryParams;
-	QueryParams.bTraceComplex = true;
-	QueryParams.AddIgnoredActor(this);
-	TArray<FOverlapResult> Overlaps;
-
-	bool bHit = GetWorld()->OverlapMultiByObjectType(Overlaps, NewLocation, FQuat::Identity, ECC_WorldStatic, CollisionSphere, QueryParams);
-
-	if (bHit)
+	if(HasAuthority())
 	{
-		for (const FOverlapResult& Result : Overlaps)
+		FCollisionShape CollisionSphere = FCollisionShape::MakeSphere(5.f);
+		FCollisionQueryParams QueryParams;
+		QueryParams.bTraceComplex = true;
+		QueryParams.AddIgnoredActor(this);
+		TArray<FOverlapResult> Overlaps;
+
+		bool bHit = GetWorld()->OverlapMultiByObjectType(Overlaps, NewLocation, FQuat::Identity, ECC_WorldStatic, CollisionSphere, QueryParams);
+
+		if (bHit)
 		{
-			if (Cast<APortal>(Result.GetActor()))
+			for (const FOverlapResult& Result : Overlaps)
 			{
-				return;
+				if (Cast<APortal>(Result.GetActor()))
+				{
+					return;
+				}
 			}
 		}
+		SetActorLocationAndRotation(NewLocation, NewRotation);
+		PortalTransform = GetActorTransform();
+		CheckPortalBounds();
+		OnRep_PortalLocationChanged();
 	}
-	SetActorLocationAndRotation(NewLocation, NewRotation);
-	CheckPortalBounds();
+}
+
+void APortal::OnRep_PortalLocationChanged()
+{
+	SetActorTransform(PortalTransform);
 }
 
 APortal* APortal::GetLinkedPortal()
@@ -189,29 +210,43 @@ void APortal::SetupLinkedPortal()
 
 void APortal::UpdateSceneCapture()
 {
-	// Get the player camera manager
-	APlayerCameraManager* PlayerCameraManager = UGameplayStatics::GetPlayerCameraManager(GetWorld(), 0);
+	APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
 
-	// Get the world transform of the player's camera
-	FTransform PlayerCameraTransform = PlayerCameraManager->GetTransform();
+	if (PlayerController && PlayerController->IsLocalController())
+	{
+		// Get the player camera manager
+		APlayerCameraManager* PlayerCameraManager = PlayerController->PlayerCameraManager;
 
-	// Get the world transform of the back facing scene
-	FTransform BackFacingSceneTransform = BackFacingScene->GetComponentTransform();
+		if (PlayerCameraManager)
+		{
+			if(BackFacingScene)
+			{
+				// Get the world transform of the player's camera
+				FTransform PlayerCameraTransform = PlayerCameraManager->GetTransform();
 
-	// Calculate the relative transform between the player camera and the back facing scene
-	FTransform RelativeTransform = UKismetMathLibrary::MakeRelativeTransform(PlayerCameraTransform, BackFacingSceneTransform);
+				// Get the world transform of the back facing scene
+				FTransform BackFacingSceneTransform = BackFacingScene->GetComponentTransform();
 
-	// Set the relative transform to the linked portal's camera
-	LinkedPortalCamera->SetRelativeLocationAndRotation(RelativeTransform.GetLocation(), RelativeTransform.GetRotation());
+				// Calculate the relative transform between the player camera and the back facing scene
+				FTransform RelativeTransform = UKismetMathLibrary::MakeRelativeTransform(PlayerCameraTransform, BackFacingSceneTransform);
+		
+				if(LinkedPortalCamera)
+				{
+					// Set the relative transform to the linked portal's camera
+					LinkedPortalCamera->SetRelativeLocationAndRotation(RelativeTransform.GetLocation(), RelativeTransform.GetRotation());
 
-	// Calculate the distance between the p	layer camera manager and the portal
-	float Distance = FVector::Distance(PlayerCameraManager->GetCameraLocation(), GetActorLocation());
+					// Calculate the distance between the p	layer camera manager and the portal
+					float Distance = FVector::Distance(PlayerCameraManager->GetCameraLocation(), GetActorLocation());
 
-	// Add 1 to the distance for better result
-	Distance += 1.f;
+					// Add 1 to the distance for better result
+					Distance += 1.f;
 
-	// Set the custom near clipping plane value for the linked portal camera
-	LinkedPortalCamera->CustomNearClippingPlane = Distance;
+					// Set the custom near clipping plane value for the linked portal camera
+					LinkedPortalCamera->CustomNearClippingPlane = Distance;
+				}
+			}
+		}
+	}
 }
 
 void APortal::BeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
@@ -484,6 +519,7 @@ void APortal::CheckPortalBounds()
 				float DistanceToLimit = (TopLimit - Result.Location).Size();
 				FVector NewLocation = GetActorLocation() - GetActorUpVector() * DistanceToLimit;
 				SetActorLocationAndRotation(NewLocation, GetActorRotation());
+				PortalTransform = GetActorTransform();
 				bAnyTopObjectHit = true;
 				break;
 			}
@@ -529,6 +565,7 @@ void APortal::CheckPortalBounds()
 					// Move the portal the distance to the wall
 					FVector NewPosition = GetActorLocation() - GetActorUpVector() * DistanceToWall;
 					SetActorLocationAndRotation(NewPosition, GetActorRotation());
+					PortalTransform = GetActorTransform();
 				}
 			}
 		}
@@ -565,6 +602,7 @@ void APortal::CheckPortalBounds()
 				float DistanceToLimit = (BottomLimit - Result.Location).Size();
 				FVector NewLocation = GetActorLocation() + GetActorUpVector() * DistanceToLimit;
 				SetActorLocationAndRotation(NewLocation, GetActorRotation());
+				PortalTransform = GetActorTransform();
 				bAnyBottomObjectHit = true;
 				break;
 			}
@@ -611,6 +649,7 @@ void APortal::CheckPortalBounds()
 					// Move the portal the distance to the wall
 					FVector NewPosition = GetActorLocation() + GetActorUpVector() * DistanceToWall;
 					SetActorLocationAndRotation(NewPosition, GetActorRotation());
+					PortalTransform = GetActorTransform();
 				}
 			}
 		}

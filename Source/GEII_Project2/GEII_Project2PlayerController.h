@@ -29,8 +29,7 @@ protected:
 
 	virtual void BeginPlay() override;
 
-protected: 
-
+protected:
 	/** Server function for spawning the character */
 	UFUNCTION(BlueprintCallable, Server, Reliable)
 	void Server_SpawnPlayer();

@@ -2,7 +2,10 @@
 
 #include "GEII_Project2GameMode.h"
 #include "GEII_Project2Character.h"
+#include "GEII_Project2PlayerController.h"
 #include "UObject/ConstructorHelpers.h"
+#include "Kismet/KismetMathLibrary.h"
+#include "Net/UnrealNetwork.h"
 
 AGEII_Project2GameMode::AGEII_Project2GameMode()
 	: Super()
@@ -11,6 +14,16 @@ AGEII_Project2GameMode::AGEII_Project2GameMode()
 	static ConstructorHelpers::FClassFinder<APawn> PlayerPawnClassFinder(TEXT("/Game/FirstPerson/Blueprints/BP_FirstPersonCharacter"));
 	DefaultPawnClass = PlayerPawnClassFinder.Class;
 
+	World = GetWorld();
+}
+
+void AGEII_Project2GameMode::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AGEII_Project2GameMode, SpawnedBluePortal);
+	DOREPLIFETIME(AGEII_Project2GameMode, SpawnedOrangePortal);
 }
 
 // New Code
@@ -129,4 +142,69 @@ void AGEII_Project2GameMode::SetPlayerColor(APlayerController* PlayerController,
 	{
 		PlayerCharacter->ChangeColor(PlayerColorOptions[PlayerIndex]);
 	}
+}
+
+void AGEII_Project2GameMode::SpawnBluePortal(FHitResult TraceHit)
+{
+	if(!SpawnedBluePortal->IsValidLowLevel())
+	{
+		if (!BluePortal)
+		{
+			return;
+		}
+		FActorSpawnParameters ActorSpawnParams;
+		ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		FVector LocationToSpawn = TraceHit.Location + TraceHit.Normal;
+		SpawnedBluePortal = World->SpawnActor<APortal>(BluePortal, LocationToSpawn, UKismetMathLibrary::MakeRotFromX(TraceHit.Normal), ActorSpawnParams);
+		SpawnedBluePortal->SetCurrentWall(TraceHit.GetActor());
+		SpawnedBluePortal->PlacePortal(LocationToSpawn, UKismetMathLibrary::MakeRotFromX(TraceHit.Normal));
+		if (SpawnedOrangePortal->IsValidLowLevel())
+		{
+			SpawnedBluePortal->SetPortalToLink(SpawnedOrangePortal);
+			SpawnedOrangePortal->SetPortalToLink(SpawnedBluePortal);
+			SpawnedBluePortal->SetupLinkedPortal();
+			SpawnedOrangePortal->SetupLinkedPortal();
+		}
+	}
+	else
+	{
+		SpawnedBluePortal->SetCurrentWall(TraceHit.GetActor());
+		ChangePortalLocation(SpawnedBluePortal, TraceHit.Location, UKismetMathLibrary::MakeRotFromX(TraceHit.Normal));
+	}
+	
+
+}
+
+void AGEII_Project2GameMode::SpawnOrangePortal(FHitResult TraceHit)
+{
+	if (!SpawnedOrangePortal->IsValidLowLevel())
+	{
+		if (!OrangePortal)
+		{
+			return;
+		}
+		FActorSpawnParameters ActorSpawnParams;
+		ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		FVector LocationToSpawn = TraceHit.Location + TraceHit.Normal;
+		SpawnedOrangePortal = World->SpawnActor<APortal>(OrangePortal, LocationToSpawn, UKismetMathLibrary::MakeRotFromX(TraceHit.Normal), ActorSpawnParams);
+		SpawnedOrangePortal->SetCurrentWall(TraceHit.GetActor());
+		SpawnedOrangePortal->PlacePortal(LocationToSpawn, UKismetMathLibrary::MakeRotFromX(TraceHit.Normal));
+		if (SpawnedBluePortal->IsValidLowLevel())
+		{
+			SpawnedOrangePortal->SetPortalToLink(SpawnedBluePortal);
+			SpawnedBluePortal->SetPortalToLink(SpawnedOrangePortal);
+			SpawnedOrangePortal->SetupLinkedPortal();
+			SpawnedBluePortal->SetupLinkedPortal();
+		}
+	}
+	else
+	{
+		SpawnedOrangePortal->SetCurrentWall(TraceHit.GetActor());
+		ChangePortalLocation(SpawnedOrangePortal, TraceHit.Location, UKismetMathLibrary::MakeRotFromX(TraceHit.Normal));
+	}
+}
+
+void AGEII_Project2GameMode::ChangePortalLocation(APortal* PortalToChangeLocation, FVector NewLocation, FRotator NewRotation)
+{
+	PortalToChangeLocation->PlacePortal(NewLocation, NewRotation);
 }
