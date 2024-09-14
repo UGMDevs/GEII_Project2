@@ -70,6 +70,10 @@ public:
 	UFUNCTION()
 	virtual void ReloadWeapon();
 
+	/** Function increment bullets */
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	virtual void IncrementAmmo();
+
 	/** Function for ending weapon fire. Once this is called, the player can use
 	StartFire again.*/
 	UFUNCTION(BlueprintCallable, Category = "Weapon|WeaponFire")
@@ -108,8 +112,12 @@ protected:
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Weapon|Ammo")
 	int ClipAmmo;
 
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category="Weapon|Ammo")
+	int BulletsToIncrement;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Weapon|Ammo")
 	float ReloadTime;
+
 
 protected:
 	/** Ends gameplay for this component. */

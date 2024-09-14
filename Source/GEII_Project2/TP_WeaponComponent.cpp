@@ -24,11 +24,12 @@ UTP_WeaponComponent::UTP_WeaponComponent()
 	FireRate = 0.25f;
 	bIsFiringWeapon = false;
 
-	MaxTotalAmmo = 100;
+	MaxTotalAmmo = 64;
 	MaxClipAmmo = 12;
 	TotalAmmo = 64;
 	ClipAmmo = 12;
 	ReloadTime = 1.0f;
+	BulletsToIncrement = 30;
 }
 
 void UTP_WeaponComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -114,6 +115,24 @@ void UTP_WeaponComponent::ReloadWeapon()
 	else
 	{
 		Server_Reload(); // Request server to handle reloading
+	}
+}
+
+void UTP_WeaponComponent::IncrementAmmo()
+{
+	// Calculate the new potential total ammo
+	int newTotalAmmo = TotalAmmo + BulletsToIncrement;
+
+	// Check if adding the new bullets would exceed the MaxTotalAmmo
+	if (newTotalAmmo > MaxTotalAmmo)
+	{
+		// If it exceeds, cap it at MaxTotalAmmo
+		TotalAmmo = MaxTotalAmmo;
+	}
+	else
+	{
+		// Add the full bullets
+		TotalAmmo = newTotalAmmo;
 	}
 }
 
