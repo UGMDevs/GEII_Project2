@@ -16,6 +16,7 @@
 #include "Net/UnrealNetwork.h"
 #include "Engine/Engine.h"
 #include "Engine/DamageEvents.h"
+#include "GEII_Project2PlayerController.h"
 
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
@@ -476,8 +477,11 @@ void AGEII_Project2Character::OnHealthUpdate()
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, healthMessage);
 		if (CurrentHealth <= 0)
 		{
+			
 			FString deathMessage = FString::Printf(TEXT("You have been killed."));
 			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, deathMessage);
+			
+			Destroy();
 		}
 	}
 	//Server-specific functionality
@@ -485,6 +489,9 @@ void AGEII_Project2Character::OnHealthUpdate()
 	{
 		FString healthMessage = FString::Printf(TEXT("%s now has %f health remaining."), *GetFName().ToString(), CurrentHealth);
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, healthMessage);
+		AGEII_Project2PlayerController* PlayerController = Cast<AGEII_Project2PlayerController>(GetController());
+		PlayerController->RespawnPlayer();
+		Destroy();
 	}
 	//Functions that occur on all machines.
 	/*

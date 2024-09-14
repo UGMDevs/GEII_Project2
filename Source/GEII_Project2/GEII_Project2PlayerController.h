@@ -16,6 +16,9 @@ class GEII_PROJECT2_API AGEII_Project2PlayerController : public APlayerControlle
 {
 	GENERATED_BODY()
 	
+public:
+	AGEII_Project2PlayerController();
+
 protected:
 
 	/** Input Mapping Context to be used for player input */
@@ -31,4 +34,13 @@ protected:
 	/** Server function for spawning the character */
 	UFUNCTION(BlueprintCallable, Server, Reliable)
 	void Server_SpawnPlayer();
+
+	FTimerHandle RespawnTimer;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Respawn")
+	float RespawnAfterDeath;
+
+public:
+	UFUNCTION(BlueprintCallable)
+	void RespawnPlayer();
 };

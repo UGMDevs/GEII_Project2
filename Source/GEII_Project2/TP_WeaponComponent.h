@@ -61,7 +61,7 @@ public:
 	void Server_Fire();
 
 	UFUNCTION()
-	void VerifyAmmo();
+	virtual void VerifyAmmo();
 
 	UFUNCTION(Server, Reliable)
 	void Server_Reload();
@@ -77,10 +77,13 @@ public:
 	/** Function for ending weapon fire. Once this is called, the player can use
 	StartFire again.*/
 	UFUNCTION(BlueprintCallable, Category = "Weapon|WeaponFire")
-	void StopFire();
+	virtual void StopFire();
 
 	UFUNCTION(Server, Reliable)
 	virtual void HandleFire();
+
+	UFUNCTION()
+	virtual void SetupActionBindings(AGEII_Project2Character* Character);
 
 protected:
 	/** Delay between shots in seconds. Used to control fire rate for your test

@@ -7,6 +7,11 @@
 #include "EnhancedInputSubsystems.h"
 #include "GEII_Project2Character.h"
 
+AGEII_Project2PlayerController::AGEII_Project2PlayerController()
+{
+	RespawnAfterDeath = 2.f;
+}
+
 void AGEII_Project2PlayerController::BeginPlay()
 {
 	Super::BeginPlay();
@@ -26,6 +31,11 @@ void AGEII_Project2PlayerController::BeginPlay()
 		Server_SpawnPlayer();
 	}
 
+}
+
+void AGEII_Project2PlayerController::RespawnPlayer()
+{
+	GetWorld()->GetTimerManager().SetTimer(RespawnTimer, this, &AGEII_Project2PlayerController::Server_SpawnPlayer, RespawnAfterDeath, false);
 }
 
 void AGEII_Project2PlayerController::Server_SpawnPlayer_Implementation()

@@ -81,8 +81,6 @@ void UTP_WeaponComponent::VerifyAmmo()
 	}
 }
 
-
-
 void UTP_WeaponComponent::StopFire()
 {
 	bIsFiringWeapon = false;
@@ -187,6 +185,33 @@ void UTP_WeaponComponent::HandleFire_Implementation()
 	}
 }
 
+void UTP_WeaponComponent::SetupActionBindings(AGEII_Project2Character* TargetCharacter)
+{
+	if (APlayerController* PlayerController = Cast<APlayerController>(TargetCharacter->GetController()))
+	{
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
+		{
+			// Set the priority of the mapping to 1, so that it overrides the Jump action with the Fire action when using touch input
+			Subsystem->AddMappingContext(FireMappingContext, 0);
+		}
+
+		if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerController->InputComponent))
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Binding inputs for %s"), *TargetCharacter->GetName());
+
+			// Fire
+			EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Triggered, this, &UTP_WeaponComponent::Fire);
+
+			// Reload
+			EnhancedInputComponent->BindAction(Reload, ETriggerEvent::Triggered, this, &UTP_WeaponComponent::ReloadWeapon);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("Input component not found for %s"), *TargetCharacter->GetName());
+		}
+	}
+}
+
 void UTP_WeaponComponent::AttachWeapon(AGEII_Project2Character* TargetCharacter)
 {
 	Character = TargetCharacter;
@@ -205,30 +230,7 @@ void UTP_WeaponComponent::AttachWeapon(AGEII_Project2Character* TargetCharacter)
 	// switch bHasRifle so the animation blueprint can switch to another animation set
 	Character->SetHasRifle(true);
 
-	// Set up action bindings
-	if (APlayerController* PlayerController = Cast<APlayerController>(Character->GetController()))
-	{
-		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
-		{
-			// Set the priority of the mapping to 1, so that it overrides the Jump action with the Fire action when using touch input
-			Subsystem->AddMappingContext(FireMappingContext, 0);
-		}
-
-		if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerController->InputComponent))
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Binding inputs for %s"), *Character->GetName());
-
-			// Fire
-			EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Triggered, this, &UTP_WeaponComponent::Fire);
-
-			// Reload
-			EnhancedInputComponent->BindAction(Reload, ETriggerEvent::Triggered, this, &UTP_WeaponComponent::ReloadWeapon);
-		}
-		else
-		{
-			UE_LOG(LogTemp, Error, TEXT("Input component not found for %s"), *Character->GetName());
-		}
-	}
+	SetupActionBindings(Character);
 }
 
 void UTP_WeaponComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
