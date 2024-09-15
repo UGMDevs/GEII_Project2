@@ -20,6 +20,11 @@ public:
 	// Sets default values for this actor's properties
 	APortal();
 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	UFUNCTION(BlueprintCallable)
+	void SetupRenderTarget();
+
 private:
 	// Default scene root
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Portal", meta = (AllowPrivateAccess = "true"))
@@ -50,11 +55,11 @@ protected:
 	UMaterial* PortalMaterial;
 
 	// Variable for linked portal
-	UPROPERTY(EditAnywhere, BlueprintReadONly, Category="Portal")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Replicated, Category="Portal")
 	APortal* LinkedPortal;
 
 	// Variable to set the portal color
-	UPROPERTY(EditAnywhere, BlueprintReadONly, Category="Portal")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Portal")
 	FLinearColor PortalColor;
 
 	// Variable for referencing the Portal Mesh Material
@@ -62,8 +67,11 @@ protected:
 	UMaterialInstanceDynamic* Portal_MAT;
 
 	// Variable for Capture Render Target
-	UPROPERTY(BlueprintReadOnly, Category = "Portal")
+	UPROPERTY(ReplicatedUsing = OnRep_NewRenderTarget, BlueprintReadOnly, Category = "Portal")
 	UTextureRenderTarget2D* Portal_RT;
+
+	UFUNCTION()
+	void OnRep_NewRenderTarget();
 
 public:	
 	// Called every frame
@@ -115,7 +123,7 @@ private:
 private:
 	// ---- Begin Portal Spawn ---- //
 
-	UPROPERTY()
+	UPROPERTY(VisibleInstanceOnly, Replicated, Category = "PortalSpawn")
 	USceneCaptureComponent2D* LinkedPortalCamera;
 
 protected:
@@ -123,6 +131,12 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PortalSpawn")
 	AActor* CurrentWall;
+
+	UPROPERTY(ReplicatedUsing = OnRep_PortalLocationChanged)
+	FTransform PortalTransform;
+
+	UFUNCTION()
+	void OnRep_PortalLocationChanged();
 
 	// Check and adjust portal position in the wall
 	UFUNCTION(Category = "PortalSpawn")
