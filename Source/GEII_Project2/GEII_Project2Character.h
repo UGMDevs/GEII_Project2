@@ -116,6 +116,15 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Weapon")
 	USkeletalMeshComponent* ThirdPersonCurrentWeapon;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
+	TSubclassOf<UUserWidget> HUDWidgetClass;
+
+	UUserWidget* HUDWidget;
+
+	// Add health bar update logic here
+    UFUNCTION(BlueprintImplementableEvent, Category = "UI")
+    void UpdateHealthBar(float HealthPercent);
+
 	UFUNCTION()
 	void OnRep_CurrentWeaponComponent();
 
@@ -143,9 +152,7 @@ public:
     UFUNCTION(Server, Reliable)
    	void EquipWeaponServer(TSubclassOf<UTP_WeaponComponent> NewWeaponClass);
 
-
-
-    UFUNCTION(Server, Reliable)
+	UFUNCTION(Server, Reliable)
    	void Server_EquipWeapon(TSubclassOf<UTP_WeaponComponent> NewWeaponClass);	
 
 protected:
@@ -203,14 +210,21 @@ protected:
 	void OnRep_CurrentHealth();
 
 	/** Response to health being updated. Called on the server immediately after modification, and on clients in response to a RepNotify*/
+	UFUNCTION(BlueprintCallable)
 	void OnHealthUpdate();
+
+	UFUNCTION(BlueprintCallable)
+	void AddKillToDamageCauser();
+
+	UPROPERTY(VisibleInstanceOnly)
+	AGEII_Project2Character* LastDamageCauser;
 
 	public:
 	/** Getter for Max Health.*/
 	UFUNCTION(BlueprintPure, Category = "Health")
 	FORCEINLINE float GetMaxHealth() const { return MaxHealth; }
 	/** Getter for Current Health.*/
-	UFUNCTION(BlueprintPure, Category = "Health")
+	UFUNCTION(BlueprintCallable,BlueprintPure, Category = "Health")
 	FORCEINLINE float GetCurrentHealth() const { return CurrentHealth; }
 	/** Setter for Current Health. Clamps the value between 0 and MaxHealth and calls
 	OnHealthUpdate. Should only be called on the server.*/
