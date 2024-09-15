@@ -144,6 +144,27 @@ void AGEII_Project2GameMode::SetPlayerColor(APlayerController* PlayerController,
 	}
 }
 
+// STILL TO BE FIGURED OUT
+
+void AGEII_Project2GameMode::AddPlayerDeath(APlayerController* Player)
+{
+	if(AllPlayerControllers.Contains(Player))
+	{
+		AGEII_Project2PlayerController* PlayerController = Cast<AGEII_Project2PlayerController>(Player);
+		PlayerController->AddDeath();
+	}
+}
+
+// STILL TO BE FIGURED OUT
+void AGEII_Project2GameMode::AddPlayerKill(APlayerController* Player)
+{
+	if (AllPlayerControllers.Contains(Player))
+	{
+		AGEII_Project2PlayerController* PlayerController = Cast<AGEII_Project2PlayerController>(Player);
+		PlayerController->AddKill();
+	}
+}
+
 void AGEII_Project2GameMode::SpawnBluePortal(FHitResult TraceHit)
 {
 	if(!SpawnedBluePortal->IsValidLowLevel())

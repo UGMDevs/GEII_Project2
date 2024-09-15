@@ -62,7 +62,7 @@ protected:
 	/** Change the color of a character related to a player controller*/
 	UFUNCTION(BlueprintCallable, Category = "Player Spawning")
 	void SetPlayerColor(APlayerController* PlayerController, AGEII_Project2Character* PlayerCharacter);
-
+	
 public:
 	/** Spawn a character for the player controller*/
 	UFUNCTION(BlueprintCallable, Category = "Player Spawning")
@@ -80,6 +80,14 @@ public:
 	/** Spawn orange portal*/
 	UFUNCTION(BlueprintCallable, Category = "PortalGun|Portal")
 	void SpawnOrangePortal(FHitResult TraceHit);
+
+
+	// STILL TO BE FIGURED OUT
+	UFUNCTION()
+	void AddPlayerDeath(APlayerController* Player);
+
+	UFUNCTION()
+	void AddPlayerKill(APlayerController* Player);
 
 protected:
 	UPROPERTY(VisibleAnywhere, Replicated, Category = "Portal")

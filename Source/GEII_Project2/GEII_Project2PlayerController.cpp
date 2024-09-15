@@ -6,6 +6,7 @@
 #include "GEII_Project2GameMode.h"
 #include "EnhancedInputSubsystems.h"
 #include "GEII_Project2Character.h"
+#include "../../../../../../../Source/Runtime/Engine/Public/Net/UnrealNetwork.h"
 
 AGEII_Project2PlayerController::AGEII_Project2PlayerController()
 {
@@ -36,6 +37,28 @@ void AGEII_Project2PlayerController::BeginPlay()
 void AGEII_Project2PlayerController::RespawnPlayer()
 {
 	GetWorld()->GetTimerManager().SetTimer(RespawnTimer, this, &AGEII_Project2PlayerController::Server_SpawnPlayer, RespawnAfterDeath, false);
+}
+
+
+// STILL TO BE FIGURED OUT
+void AGEII_Project2PlayerController::AddKill()
+{
+	Kills++;
+}
+
+void AGEII_Project2PlayerController::AddDeath()
+{
+	Deaths++;
+}
+//////////////////////////////////////////////
+
+
+void AGEII_Project2PlayerController::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AGEII_Project2PlayerController, Kills);
+	DOREPLIFETIME(AGEII_Project2PlayerController, Deaths);
 }
 
 void AGEII_Project2PlayerController::Server_SpawnPlayer_Implementation()

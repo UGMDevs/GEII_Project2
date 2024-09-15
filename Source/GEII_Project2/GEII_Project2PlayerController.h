@@ -39,7 +39,23 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Respawn")
 	float RespawnAfterDeath;
 
+	
 public:
 	UFUNCTION(BlueprintCallable)
 	void RespawnPlayer();
+
+	UFUNCTION()
+	void AddKill();
+
+	UFUNCTION()
+	void AddDeath();
+
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "HUD")
+	int32 Kills;
+
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "HUD")
+	int32 Deaths;
+
+	/** Property replication*/
+	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 };
