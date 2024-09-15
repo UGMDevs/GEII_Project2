@@ -22,6 +22,9 @@ public:
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
+	UFUNCTION(BlueprintCallable)
+	void SetupRenderTarget();
+
 private:
 	// Default scene root
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Portal", meta = (AllowPrivateAccess = "true"))
@@ -64,8 +67,11 @@ protected:
 	UMaterialInstanceDynamic* Portal_MAT;
 
 	// Variable for Capture Render Target
-	UPROPERTY(BlueprintReadOnly, Category = "Portal")
+	UPROPERTY(ReplicatedUsing = OnRep_NewRenderTarget, BlueprintReadOnly, Category = "Portal")
 	UTextureRenderTarget2D* Portal_RT;
+
+	UFUNCTION()
+	void OnRep_NewRenderTarget();
 
 public:	
 	// Called every frame

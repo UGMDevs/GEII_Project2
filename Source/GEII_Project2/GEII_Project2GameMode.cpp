@@ -163,7 +163,6 @@ void AGEII_Project2GameMode::SpawnBluePortal(FHitResult TraceHit)
 			SpawnedBluePortal->SetPortalToLink(SpawnedOrangePortal);
 			SpawnedOrangePortal->SetPortalToLink(SpawnedBluePortal);
 			SpawnedBluePortal->SetupLinkedPortal();
-			SpawnedOrangePortal->SetupLinkedPortal();
 		}
 	}
 	else
@@ -194,7 +193,6 @@ void AGEII_Project2GameMode::SpawnOrangePortal(FHitResult TraceHit)
 			SpawnedOrangePortal->SetPortalToLink(SpawnedBluePortal);
 			SpawnedBluePortal->SetPortalToLink(SpawnedOrangePortal);
 			SpawnedOrangePortal->SetupLinkedPortal();
-			SpawnedBluePortal->SetupLinkedPortal();
 		}
 	}
 	else

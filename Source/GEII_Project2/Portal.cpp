@@ -85,6 +85,7 @@ void APortal::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeP
 	DOREPLIFETIME(APortal, LinkedPortal);
 	DOREPLIFETIME(APortal, PortalTransform);
 	DOREPLIFETIME(APortal, LinkedPortalCamera);
+	DOREPLIFETIME(APortal, Portal_RT);
 }
 
 // Called when the game starts or when spawned
@@ -93,10 +94,6 @@ void APortal::BeginPlay()
 	Super::BeginPlay();
 
 	CheckPortalBounds();
-
-	// Get the size of the portal mesh
-	FBoxSphereBounds Bounds = PortalMesh->GetStaticMesh()->GetBounds();
-	FVector BoxExtent = Bounds.BoxExtent;
 
 	// Bind overlap functions to the portal
 	CollisionComponent->OnComponentBeginOverlap.AddDynamic(this, &APortal::BeginOverlap);
@@ -109,23 +106,40 @@ void APortal::BeginPlay()
 	// Assign the dynamic material instance to Portal_MAT
 	PortalMesh->SetMaterial(0, Portal_MAT);
 
-	// Get the game's viewport
-	UGameViewportClient* ViewportClient = GetWorld()->GetGameViewport();
+	SetupRenderTarget();
+}
 
-	if (ViewportClient)
+void APortal::OnRep_NewRenderTarget()
+{
+	if (Portal_RT && Portal_MAT)
 	{
-		// Get the viewport size
-		FVector2D ViewportSize;
-		ViewportClient->GetViewportSize(ViewportSize);
-
-		// Create the Render Target 2D
-		Portal_RT = NewObject<UTextureRenderTarget2D>(this);
-		Portal_RT->InitAutoFormat(ViewportSize.X, ViewportSize.Y);
-
-		// Set the Render Target 2D to the texture parameter value of the Portal_MAT
 		Portal_MAT->SetTextureParameterValue("Texture", Portal_RT);
 	}
-	SetupLinkedPortal();
+}
+
+void APortal::SetupRenderTarget() 
+{
+	if (GetWorld()->GetFirstPlayerController()->IsLocalPlayerController())
+	{
+		// Get the game's viewport
+		UGameViewportClient* ViewportClient = GetWorld()->GetGameViewport();
+		if (ViewportClient)
+		{
+			// Get the viewport size
+			FVector2D ViewportSize;
+			ViewportClient->GetViewportSize(ViewportSize);
+
+			// Create the Render Target 2D
+			FString PortalName = GetName();
+			FString RenderTargetName = FString::Printf(TEXT("%s_RenderTarget"), *PortalName);
+			Portal_RT = NewObject<UTextureRenderTarget2D>(this, FName(*RenderTargetName));
+			Portal_RT->InitAutoFormat(ViewportSize.X, ViewportSize.Y);
+
+			// Set the Render Target 2D to the texture parameter value of the Portal_MAT
+			Portal_MAT->SetTextureParameterValue("Texture", Portal_RT);
+		}
+		SetupLinkedPortal();
+	}
 }
 
 // Called every frame
@@ -202,8 +216,12 @@ void APortal::SetupLinkedPortal()
 		LinkedPortalCamera = LinkedPortal->GetSceneCapture();
 		if (LinkedPortalCamera)
 		{
-			// Set the texture target for the linked portal's camera
-			LinkedPortalCamera->TextureTarget = Portal_RT;
+			if (!LinkedPortalCamera->TextureTarget)
+			{
+				// Set the texture target for the linked portal's camera
+				LinkedPortalCamera->TextureTarget = Portal_RT;
+				LinkedPortal->SetupLinkedPortal();
+			}
 		}
 	}
 }
