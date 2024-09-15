@@ -16,9 +16,6 @@
 #include "Net/UnrealNetwork.h"
 #include "Engine/Engine.h"
 #include "Engine/DamageEvents.h"
-#include "Blueprint/UserWidget.h"
-#include "GEII_Project2GameMode.h"
-#include "GEII_Project2PlayerController.h"
 
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
@@ -75,19 +72,6 @@ void AGEII_Project2Character::BeginPlay()
 {
 	// Call the base class  
 	Super::BeginPlay();
-
-	// Check if we have a valid widget class
-	if (HUDWidgetClass)
-	{
-		HUDWidget = CreateWidget<UUserWidget>(GetWorld(), HUDWidgetClass);
-
-		if (HUDWidget)
-		{
-			HUDWidget->AddToViewport();
-		}
-	}
-
-
 
 	// Add Input Mapping Context
 	if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
@@ -488,41 +472,24 @@ void AGEII_Project2Character::OnHealthUpdate()
 	// Client-specific functionality
 	if (IsLocallyControlled())
 	{
+		FString healthMessage = FString::Printf(TEXT("You now have %f health remaining."), CurrentHealth);
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, healthMessage);
 		if (CurrentHealth <= 0)
 		{
-			AGEII_Project2GameMode* GameMode = Cast<AGEII_Project2GameMode>(GetWorld()->GetAuthGameMode());
-			// STILL TO BE FIGURED OUT
-			GameMode->AddPlayerDeath(Cast<APlayerController>(GetController()));
-			AddKillToDamageCauser();
+			FString deathMessage = FString::Printf(TEXT("You have been killed."));
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, deathMessage);
 		}
 	}
 	//Server-specific functionality
 	if (GetLocalRole() == ROLE_Authority)
 	{
-		if(CurrentHealth <= 0)
-		{
-			AGEII_Project2PlayerController* PlayerController = Cast<AGEII_Project2PlayerController>(GetController());
-			PlayerController->RespawnPlayer();
-			// STILL TO BE FIGURED OUT
-			AGEII_Project2GameMode* GameMode = Cast<AGEII_Project2GameMode>(GetWorld()->GetAuthGameMode());
-			GameMode->AddPlayerDeath(Cast<APlayerController>(GetController()));
-			AddKillToDamageCauser();
-			Destroy();
-		}
+		FString healthMessage = FString::Printf(TEXT("%s now has %f health remaining."), *GetFName().ToString(), CurrentHealth);
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, healthMessage);
 	}
 	//Functions that occur on all machines.
 	/*
 	Any special functionality that should occur as a result of damage or death should be placed here.
 	*/
-}
-
-void AGEII_Project2Character::AddKillToDamageCauser()
-{
-	if (LastDamageCauser)
-	{
-		AGEII_Project2GameMode* GameMode = Cast<AGEII_Project2GameMode>(GetWorld()->GetAuthGameMode());
-		GameMode->AddPlayerKill(Cast<APlayerController>(LastDamageCauser->GetController()));
-	}
 }
 
 void AGEII_Project2Character::SetCurrentHealth(float healthValue)
@@ -551,7 +518,6 @@ void AGEII_Project2Character::ChangeColor(FLinearColor NewColor)
 
 float AGEII_Project2Character::TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
-	LastDamageCauser = Cast<AGEII_Project2Character>(DamageCauser);
 	if (DamageEvent.IsOfType(FPointDamageEvent::ClassID))
 	{
 		const FPointDamageEvent* PointDamageEvent = (FPointDamageEvent*)&DamageEvent;

@@ -16,9 +16,6 @@ class GEII_PROJECT2_API AGEII_Project2PlayerController : public APlayerControlle
 {
 	GENERATED_BODY()
 	
-public:
-	AGEII_Project2PlayerController();
-
 protected:
 
 	/** Input Mapping Context to be used for player input */
@@ -29,33 +26,9 @@ protected:
 
 	virtual void BeginPlay() override;
 
-protected:
+protected: 
+
 	/** Server function for spawning the character */
 	UFUNCTION(BlueprintCallable, Server, Reliable)
 	void Server_SpawnPlayer();
-
-	FTimerHandle RespawnTimer;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Respawn")
-	float RespawnAfterDeath;
-
-	
-public:
-	UFUNCTION(BlueprintCallable)
-	void RespawnPlayer();
-
-	UFUNCTION()
-	void AddKill();
-
-	UFUNCTION()
-	void AddDeath();
-
-	UPROPERTY(BlueprintReadOnly, Replicated, Category = "HUD")
-	int32 Kills;
-
-	UPROPERTY(BlueprintReadOnly, Replicated, Category = "HUD")
-	int32 Deaths;
-
-	/** Property replication*/
-	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 };

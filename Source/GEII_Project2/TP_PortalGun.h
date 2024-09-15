@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "TP_WeaponComponent.h"
-#include "GEII_Project2GameMode.h"
 #include "TP_PortalGun.generated.h"
 
 /**
@@ -39,20 +38,6 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_FirePortal(TSubclassOf<class APortalProjectile> PortalProjectile);
 
-	/** Spawn blue portal*/
-	UFUNCTION(BlueprintCallable, Category = "PortalGun|Portal")
-	void SpawnBluePortal();
-
-	UFUNCTION(BlueprintCallable, Server, Reliable, Category = "PortalGun|Portal")
-	void Server_SpawnBluePortal();
-
-	UFUNCTION(BlueprintCallable, Category = "PortalGun|Portal")
-	void SpawnOrangePortal();
-
-	/** Spawn orange portal*/
-	UFUNCTION(BlueprintCallable, Server, Reliable, Category = "PortalGun|Portal")
-	void Server_SpawnOrangePortal();
-
 protected:
 	/** Perform a LineTrace */
 	UFUNCTION(BlueprintCallable, Category="PortalGun|LineTrace")
@@ -76,9 +61,35 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
 	class UInputAction* SecondFireAction;
 
-	FHitResult LastTraceHit;
+public:
+	/** Spawn a portal */
+	UFUNCTION(BlueprintCallable, Category = "PortalGun|Portal")
+	void SpawnPortal(TSubclassOf<class APortal> PortalToSpawn);
 	
-	AGEII_Project2GameMode* GameMode;
+	/** Change portal location to a new location*/
+	UFUNCTION(BlueprintCallable, Category = "PortalGun|Portal")
+	void ChangePortalLocation(APortal* PortalToChangeLocation, FVector NewLocation, FRotator NewRotation);
+	
+	/** Spawn blue portal*/
+	UFUNCTION(BlueprintCallable, Category = "PortalGun|Portal")
+	void SpawnBluePortal();
 
-	AGEII_Project2Character* OwnerCharacter;
+	/** Spawn orange portal*/
+	UFUNCTION(BlueprintCallable, Category = "PortalGun|Portal")
+	void SpawnOrangePortal();
+
+protected:
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="PortalGun|Portal", meta =(AllowPrivateAccess = "true"))
+	TSubclassOf<class APortal> BluePortal;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="PortalGun|Portal", meta =(AllowPrivateAccess = "true"))
+	TSubclassOf<class APortal> OrangePortal;
+
+	UPROPERTY(VisibleInstanceOnly, Category = "PortalGun|Portal")
+	APortal* SpawnedBluePortal;
+	 
+	UPROPERTY(VisibleInstanceOnly, Category = "PortalGun|Portal")
+	APortal* SpawnedOrangePortal;
+
+	FHitResult LastTraceHit;
 };

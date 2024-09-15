@@ -27,8 +27,27 @@ void UTP_PortalGun::BeginPlay()
 {
 	Super::BeginPlay();
 
-	OwnerCharacter = Cast<AGEII_Project2Character>(GetOwner());
-	GameMode = Cast<AGEII_Project2GameMode>(GetWorld()->GetAuthGameMode());
+	TArray<AActor*> FoundPortals;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), APortal::StaticClass(), FoundPortals);
+
+	for (AActor* Actor : FoundPortals)
+	{
+		APortal* Portal = Cast<APortal>(Actor);
+		if (Portal)
+		{
+			// Check if this is the Blue Portal
+			if (Portal->ActorHasTag(TEXT("BluePortal")))
+			{
+				SpawnedBluePortal = Portal;
+			}
+			// Check if this is the Orange Portal
+			else if (Portal->ActorHasTag(TEXT("OrangePortal")))
+			{
+				SpawnedOrangePortal = Portal;
+			}
+		}
+	}
+
 }
 
 void UTP_PortalGun::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -184,50 +203,71 @@ bool UTP_PortalGun::PerformLineTrace()
 	return bLastTraceHitPortalWall;
 }
 
-
-void UTP_PortalGun::SpawnBluePortal()
+void UTP_PortalGun::SpawnPortal(TSubclassOf<class APortal> PortalToSpawn)
 {
-	if (OwnerCharacter->GetLocalRole() == ROLE_Authority)
+	UWorld* const World = GetWorld();
+	if (World)
 	{
-		GameMode->SpawnBluePortal(LastTraceHit);
-	}
-	else
-	{
-		Server_SpawnBluePortal();
+		FActorSpawnParameters ActorSpawnParams;
+		ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		FVector LocationToSpawn = LastTraceHit.Location + LastTraceHit.Normal;
+		if (PortalToSpawn == BluePortal)
+		{
+			SpawnedBluePortal = World->SpawnActor<APortal>(PortalToSpawn, FVector(0, 0, 0), FRotator(0, 0, 0), ActorSpawnParams);
+			SpawnedBluePortal->SetCurrentWall(LastTraceHit.GetActor());
+			SpawnedBluePortal->PlacePortal(LocationToSpawn, UKismetMathLibrary::MakeRotFromX(LastTraceHit.Normal));
+			if (SpawnedOrangePortal->IsValidLowLevel())
+			{
+				SpawnedBluePortal->SetPortalToLink(SpawnedOrangePortal);
+				SpawnedOrangePortal->SetPortalToLink(SpawnedBluePortal);
+				SpawnedBluePortal->SetupLinkedPortal();
+				SpawnedOrangePortal->SetupLinkedPortal();
+			}
+		}
+		else if (PortalToSpawn == OrangePortal)
+		{
+			SpawnedOrangePortal = World->SpawnActor<APortal>(PortalToSpawn, LocationToSpawn, UKismetMathLibrary::MakeRotFromX(LastTraceHit.Normal), ActorSpawnParams);
+			SpawnedOrangePortal->SetCurrentWall(LastTraceHit.GetActor());
+			SpawnedOrangePortal->PlacePortal(LocationToSpawn, UKismetMathLibrary::MakeRotFromX(LastTraceHit.Normal));
+			if (SpawnedBluePortal->IsValidLowLevel())
+			{
+				SpawnedOrangePortal->SetPortalToLink(SpawnedBluePortal);
+				SpawnedBluePortal->SetPortalToLink(SpawnedOrangePortal);
+				SpawnedOrangePortal->SetupLinkedPortal();
+				SpawnedBluePortal->SetupLinkedPortal();
+			}
+		}
 	}
 }
 
-void UTP_PortalGun::Server_SpawnBluePortal_Implementation()
+void UTP_PortalGun::ChangePortalLocation(APortal* PortalToChangeLocation, FVector NewLocation, FRotator NewRotation)
 {
-	if (OwnerCharacter->HasAuthority())
+	PortalToChangeLocation->PlacePortal(NewLocation, NewRotation);
+}
+
+void UTP_PortalGun::SpawnBluePortal()
+{
+	if (SpawnedBluePortal == nullptr)
 	{
-		if (GameMode)
-		{
-			GameMode->SpawnBluePortal(LastTraceHit);
-		}
+		SpawnPortal(BluePortal);
+	}
+	else
+	{
+		SpawnedBluePortal->SetCurrentWall(LastTraceHit.GetActor());
+		ChangePortalLocation(SpawnedBluePortal, LastTraceHit.Location, UKismetMathLibrary::MakeRotFromX(LastTraceHit.Normal));
 	}
 }
 
 void UTP_PortalGun::SpawnOrangePortal()
 {
-	if (OwnerCharacter->GetLocalRole() == ROLE_Authority)
+	if (SpawnedOrangePortal == nullptr)
 	{
-		GameMode->SpawnOrangePortal(LastTraceHit);
+		SpawnPortal(OrangePortal);
 	}
-	else 
+	else
 	{
-		Server_SpawnOrangePortal();
-	}
-}
-
-void UTP_PortalGun::Server_SpawnOrangePortal_Implementation()
-{
-	if (OwnerCharacter->HasAuthority())
-	{
-		if (GameMode)
-		{
-			GameMode->SpawnOrangePortal(LastTraceHit);
-		}
+		SpawnedOrangePortal->SetCurrentWall(LastTraceHit.GetActor());
+		ChangePortalLocation(SpawnedOrangePortal, LastTraceHit.Location, UKismetMathLibrary::MakeRotFromX(LastTraceHit.Normal));
 	}
 }
 

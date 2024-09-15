@@ -18,16 +18,11 @@ class GEII_PROJECT2_API APortalProjectile : public AGEII_Project2Projectile
 public:
 	APortalProjectile();
 
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-
 	virtual void OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit) override;
 
-	virtual void Destroyed() override;
-
 	UFUNCTION(BlueprintCallable)
-	virtual void SetWeaponThatShot(UTP_PortalGun* Weapon);
+	void SetWeaponThatShot(UTP_PortalGun* Weapon);
 
 protected:
-	UPROPERTY(Replicated)
 	UTP_PortalGun* WeaponThatShotMe;
 };
