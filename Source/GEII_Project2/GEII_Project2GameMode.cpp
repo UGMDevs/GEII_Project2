@@ -144,7 +144,7 @@ void AGEII_Project2GameMode::SetPlayerColor(APlayerController* PlayerController,
 	}
 }
 
-// STILL TO BE FIGURED OUT
+
 
 void AGEII_Project2GameMode::AddPlayerDeath(APlayerController* Player)
 {
@@ -155,7 +155,7 @@ void AGEII_Project2GameMode::AddPlayerDeath(APlayerController* Player)
 	}
 }
 
-// STILL TO BE FIGURED OUT
+
 void AGEII_Project2GameMode::AddPlayerKill(APlayerController* Player)
 {
 	if (AllPlayerControllers.Contains(Player))

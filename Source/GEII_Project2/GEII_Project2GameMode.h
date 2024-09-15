@@ -82,7 +82,6 @@ public:
 	void SpawnOrangePortal(FHitResult TraceHit);
 
 
-	// STILL TO BE FIGURED OUT
 	UFUNCTION()
 	void AddPlayerDeath(APlayerController* Player);
 

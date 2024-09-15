@@ -490,7 +490,9 @@ void AGEII_Project2Character::OnHealthUpdate()
 	{
 		if (CurrentHealth <= 0)
 		{
-			
+			AGEII_Project2GameMode* GameMode = Cast<AGEII_Project2GameMode>(GetWorld()->GetAuthGameMode());
+			GameMode->AddPlayerDeath(Cast<APlayerController>(GetController()));
+			AddKillToDamageCauser();
 		}
 	}
 	//Server-specific functionality
@@ -500,9 +502,6 @@ void AGEII_Project2Character::OnHealthUpdate()
 		{
 			AGEII_Project2PlayerController* PlayerController = Cast<AGEII_Project2PlayerController>(GetController());
 			PlayerController->RespawnPlayer();
-			AGEII_Project2GameMode* GameMode = Cast<AGEII_Project2GameMode>(GetWorld()->GetAuthGameMode());
-			GameMode->AddPlayerDeath(Cast<APlayerController>(GetController()));
-			AddKillToDamageCauser();
 			Destroy();
 		}
 	}
