@@ -56,14 +56,14 @@ void APickUpWeapon::Server_HidePickup_Implementation()
     for (UPrimitiveComponent* Comp : PrimitiveComponents)
     {
         Comp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-        Comp->SetVisibility(false);  // Ensure visibility is also disabled if necessary
+        Comp->SetVisibility(false); 
     }
         
 }
 
 bool APickUpWeapon::Server_HidePickup_Validate()
 {
-    return true; // Add validation logic if needed
+    return true; 
 }
 
 void APickUpWeapon::Server_ReactivatePickup_Implementation()
@@ -78,13 +78,13 @@ void APickUpWeapon::Server_ReactivatePickup_Implementation()
     for (UPrimitiveComponent* Comp : PrimitiveComponents)
     {
         Comp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-        Comp->SetVisibility(true);  // Ensure visibility is enabled when reactivating
+        Comp->SetVisibility(true);  
     }
 }
 
 bool APickUpWeapon::Server_ReactivatePickup_Validate()
 {
-    return true; // Add validation logic if needed
+    return true; 
 }
 
 
